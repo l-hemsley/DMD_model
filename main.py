@@ -90,14 +90,14 @@ for w in wavelengths:
     input.wavelength=w;
     data=grating_function(input, output, dmd)
 
-    # fig, ax = plt.subplots()
-    # im=ax.imshow(data,extent=(output.angle_x_array[0],output.angle_x_array[-1],output.angle_y_array[0],output.angle_y_array[-1]))
-    # ax.text(output.angle_x_array[0],output.angle_y_array[0],'wavelength='+ str(int(input.wavelength/nm))+ 'nm, beam size='+str(input.effective_beam_size/um)+'um',color='w')
-    # plt.xlabel('Angle Out x')
-    # plt.ylabel('Angle Out y')
-    # plt.title('Diffraction Orders, input ('+ str(input.angle_x_centre) +','+ str(input.angle_y_centre)+')')
-    # fig.colorbar(im)
-    # plt.show()
+fig, ax = plt.subplots()
+im=ax.imshow(data,extent=(output.angle_x_array[0],output.angle_x_array[-1],output.angle_y_array[0],output.angle_y_array[-1]))
+ax.text(output.angle_x_array[0],output.angle_y_array[0],'wavelength='+ str(int(input.wavelength/nm))+ 'nm, beam size='+str(input.effective_beam_size/um)+'um',color='w')
+plt.xlabel('Angle Out x')
+plt.ylabel('Angle Out y')
+plt.title('Diffraction Orders, input ('+ str(input.angle_x_centre) +','+ str(input.angle_y_centre)+')')
+fig.colorbar(im)
+plt.show()
 
-input=input_parameters(np.arange(400*nm,700*nm,5*nm),0.05,8.54,-8.54,10*um)#
-print(input.wavelength)
+# input=input_parameters(np.arange(400*nm,700*nm,5*nm),0.05,8.54,-8.54,10*um)#
+# print(input.wavelength)
