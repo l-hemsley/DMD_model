@@ -76,7 +76,7 @@ def calculate_orders(input, output, DMD):
     half_angle=output.half_angle
     order_x_max=np.ceil(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x+half_angle))/input.wavelength)
     order_x_min=np.floor(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x-half_angle))/input.wavelength)
-    order_array_x=np.arange(order_x_min,order_x_max,1)
+    order_array_x=np.arange(order_x_min-1,order_x_max+1,1)
     order_angles_x=np.arcsin(order_array_x*input.wavelength/DMD.pitch-np.sin(alpha_x))
 
 
@@ -84,7 +84,7 @@ def calculate_orders(input, output, DMD):
     beta_y = output.angle_y_centre
     order_y_max = np.ceil(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y + half_angle)) / input.wavelength)
     order_y_min = np.floor(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y - half_angle)) / input.wavelength)
-    order_array_y = np.arange(order_y_min, order_y_max, 1)
+    order_array_y = np.arange(order_y_min-1, order_y_max+1, 1)
     order_angles_y = np.arcsin(order_array_y * input.wavelength / DMD.pitch - np.sin(alpha_y))
 
     return order_angles_x, order_angles_y
@@ -107,18 +107,19 @@ def grating_function(input, output, dmd):
 ########################## main
 
 dmd=DMD_parameters('Standard',10.8*um,0.95,np.radians(12))
-input=input_parameters(600*nm,0.05,np.radians(-8.54),np.radians(8.54),20*um)
+input=input_parameters(600*nm,0.05,np.radians(-8.54),np.radians(8.54),10*um)
 output=output_parameters(0.05,np.radians(-8.54),np.radians(8.54),200)
 envelope_function(input, output, dmd)
 
 # find orders for DMD and input
-wavelengths=np.arange(400*nm,700*nm,1*nm)
+wavelengths=np.arange(400*nm,700*nm,10*nm)
 #wavelengths=np.array([400*nm])
 transmission=np.zeros((np.size(wavelengths)))
 transmission_collected=np.zeros((np.size(wavelengths)))
 
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-# fig.colorbar(im1, ax=ax1)
+#im2=ax1.imshow(np.zeros((1,1)))
+#fig.colorbar(im2, ax=ax2)
 # fig.colorbar(im2, ax=ax2)
 # fig.colorbar(im3, ax=ax3)
 
