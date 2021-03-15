@@ -76,6 +76,7 @@ def envelope_function(input, output, dmd):
 def calculate_orders(input, output, DMD):
     # find range of orders which fit in the output lens
 
+    # for x angles
     alpha_x = input.angle_x_centre
     beta_x = output.angle_x_centre
     half_angle = output.half_angle
@@ -87,6 +88,7 @@ def calculate_orders(input, output, DMD):
     order_angles_x = np.arcsin(
         order_array_x*input.wavelength/DMD.pitch-np.sin(alpha_x))
 
+    #for y angles
     alpha_y = input.angle_y_centre
     beta_y = output.angle_y_centre
     order_y_max = np.ceil(
