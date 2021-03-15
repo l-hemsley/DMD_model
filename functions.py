@@ -44,9 +44,9 @@ class output_parameters:
             self.angle_x_array, self.angle_y_array)
         self.vector = vector(self.angle_x_array_meshed,
                              self.angle_y_array_meshed, -1)
-        self.effective_NA_of_vector = np.sqrt(
+        self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed-angle_x_centre)**2+(self.angle_y_array_meshed-self.angle_y_centre)**2)
-        self.collected_vectors = self.effective_NA_of_vector < self.half_angle
+        self.collected_vectors = self.effective_angle_of_vector < self.half_angle
 
 
 class vector:
@@ -64,9 +64,9 @@ def envelope_function(input, output, dmd):
     a = input.vector
     b = output.vector
     diff = [a.x-b.x, a.y-b.y, a.z-b.z]
-    f1 = diff[0]*0.5*(1+c)+diff[1]*(0.5*(1-c))+diff[2]*(s/np.sqrt(2))
+    f1 = diff[0]*0.5*(1+c)+diff[1]*(0.5*(1-c))+diff[2]*(-s/np.sqrt(2))
     f2 = diff[0] * (0.5 * (1 - c)) + diff[1] * \
-        (0.5 * (1 + c)) + diff[2] * (- s / np.sqrt(2))
+        (0.5 * (1 + c)) + diff[2] * ( s / np.sqrt(2))
     A = 2*np.pi*f1/input.wavelength
     B = 2 * np.pi * f2 / input.wavelength
     data = (2/A)*(2/B)*np.sin(A*w/2)*np.sin(B*w/2)
@@ -80,10 +80,8 @@ def calculate_orders(input, output, DMD):
     alpha_x = input.angle_x_centre
     beta_x = output.angle_x_centre
     half_angle = output.half_angle
-    order_x_max = np.ceil(
-        DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x+half_angle))/input.wavelength)
-    order_x_min = np.floor(
-        DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x-half_angle))/input.wavelength)
+    order_x_max = np.ceil(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x+half_angle))/input.wavelength)
+    order_x_min = np.floor(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x-half_angle))/input.wavelength)
     order_array_x = np.arange(order_x_min-1, order_x_max+1, 1)
     order_angles_x = np.arcsin(
         order_array_x*input.wavelength/DMD.pitch-np.sin(alpha_x))
@@ -91,10 +89,8 @@ def calculate_orders(input, output, DMD):
     #for y angles
     alpha_y = input.angle_y_centre
     beta_y = output.angle_y_centre
-    order_y_max = np.ceil(
-        DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y + half_angle)) / input.wavelength)
-    order_y_min = np.floor(
-        DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y - half_angle)) / input.wavelength)
+    order_y_max = np.ceil(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y + half_angle)) / input.wavelength)
+    order_y_min = np.floor(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y - half_angle)) / input.wavelength)
     order_array_y = np.arange(order_y_min-1, order_y_max+1, 1)
     order_angles_y = np.arcsin(
         order_array_y * input.wavelength / DMD.pitch - np.sin(alpha_y))
@@ -118,3 +114,51 @@ def grating_function(input, output, dmd):
             data = data+gaussian2D_normalized(output.angle_x_array_meshed,
                                               order_x, output.angle_y_array_meshed, order_y, sigma)
     return data
+
+def calculate_diffraction_pattern_image(input, output, dmd):
+    E2_grating = grating_function(input, output, dmd) ** 2
+    E2_envelope = envelope_function(input, output, dmd) ** 2
+    diffraction_image = E2_grating * E2_envelope
+    image_collected = diffraction_image * output.collected_vectors
+    total_power_collected=np.sum(np.sum(image_collected))
+    return [diffraction_image,total_power_collected,E2_grating,E2_envelope]
+
+def diff_image_integrated_input_NA(input, output, dmd,integration_points):
+
+    input_angle_x_array = np.linspace(
+        input.angle_x_centre - input.half_angle, input.angle_x_centre + input.half_angle, integration_points)
+    input_angle_y_array = np.linspace(
+        input.angle_y_centre - input.half_angle, input.angle_y_centre + input.half_angle, integration_points)
+    [input_angle_x_array_meshed, input_angle_y_array_meshed] = np.meshgrid(
+        input_angle_x_array, input_angle_y_array)
+
+    effective_angle_of_vector = np.sqrt(
+        (input_angle_x_array_meshed - input.angle_x_centre) ** 2 + (input_angle_y_array_meshed - input.angle_y_centre) ** 2)
+    collected_input_vectors = abs(effective_angle_of_vector) < input.half_angle
+
+    input_angles_x=input_angle_x_array_meshed*collected_input_vectors
+    input_angles_x=input_angles_x.flatten()
+    input_angles_x=input_angles_x[input_angles_x!=0]
+    input_angles_y = input_angle_y_array_meshed * collected_input_vectors
+    input_angles_y = input_angles_y.flatten()
+    input_angles_y= input_angles_y[input_angles_y != 0]
+
+    input_adjusted=input
+    total_power_collected=np.zeros((np.size(input_angles_x)))
+    diffraction_image=E2_grating=E2_envelope=np.zeros((np.shape(output.angle_x_array_meshed)))
+    print(np.size(input_angles_x))
+    for x in input_angles_x:
+        input_adjusted.angle_x_centre = x
+        for y in input_angles_y:
+            input_adjusted.angle_y_centre=y
+            [diffraction_image_temp, total_power_collected_temp, E2_grating_temp,E2_envelope_temp] = calculate_diffraction_pattern_image(input_adjusted,
+                                                                                                              output,
+                                                                                                              dmd)
+            diffraction_image=diffraction_image+diffraction_image_temp
+            total_power_collected=total_power_collected+total_power_collected_temp
+            E2_grating=E2_grating+E2_grating_temp
+            E2_envelope=E2_envelope+E2_envelope_temp
+
+        print('input angle' + str(x)+','+str(y))
+
+    return [diffraction_image,total_power_collected,E2_grating,E2_envelope]
