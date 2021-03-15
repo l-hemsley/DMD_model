@@ -1,7 +1,18 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from functions import *
+import sys
+from tqdm import tqdm
+import time
 
 # Python 3.7.9
 
+###TO DO
+# sort normalization of E so that can calculate total power, and transmission as a percentage.
+# speed up timing
+# run other tests e.g. transmission vs NA, vs beam size
+# save figures?
 
 class DMD_parameters:
 
@@ -23,7 +34,9 @@ class input_parameters:
         self.angle_x_centre = angle_x_centre
         self.angle_y_centre = angle_y_centre
         self.effective_beam_size = effective_beam_size
-        self.vector = vector(self.angle_x_centre, self.angle_y_centre, 1)
+        self.beam_vector = vector(self.angle_x_centre, self.angle_y_centre, 1)
+
+
 
 
 class output_parameters:
@@ -42,7 +55,7 @@ class output_parameters:
         self.angle_y_array_deg = np.degrees(self.angle_y_array)
         [self.angle_x_array_meshed, self.angle_y_array_meshed] = np.meshgrid(
             self.angle_x_array, self.angle_y_array)
-        self.vector = vector(self.angle_x_array_meshed,
+        self.beam_vector = vector(self.angle_x_array_meshed,
                              self.angle_y_array_meshed, -1)
         self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed-angle_x_centre)**2+(self.angle_y_array_meshed-self.angle_y_centre)**2)
@@ -61,8 +74,8 @@ def envelope_function(input, output, dmd):
     w = dmd.mirror_width
     c = np.cos(dmd.tilt_angle)
     s = np.sin(dmd.tilt_angle)
-    a = input.vector
-    b = output.vector
+    a = input.beam_vector
+    b = output.beam_vector
     diff = [a.x-b.x, a.y-b.y, a.z-b.z]
     f1 = diff[0]*0.5*(1+c)+diff[1]*(0.5*(1-c))+diff[2]*(-s/np.sqrt(2))
     f2 = diff[0] * (0.5 * (1 - c)) + diff[1] * \
@@ -143,14 +156,22 @@ def diff_image_integrated_input_NA(input, output, dmd,integration_points):
     input_angles_y = input_angles_y.flatten()
     input_angles_y= input_angles_y[input_angles_y != 0]
 
-    input_adjusted=input
-    total_power_collected=np.zeros((np.size(input_angles_x)))
+    total_power_collected=0
     diffraction_image=E2_grating=E2_envelope=np.zeros((np.shape(output.angle_x_array_meshed)))
-    print(np.size(input_angles_x))
-    for x in input_angles_x:
-        input_adjusted.angle_x_centre = x
+
+    # plt.plot(input_angle_x_array_meshed.flatten(),input_angle_y_array_meshed.flatten(),'*')
+    # plt.plot(input_angles_x, input_angles_y, '*')
+    # plt.show()
+    # toolbar_width=np.size(input_angles_x)
+    #
+    # sys.stdout.write("[%s]" % (" " * toolbar_width))
+    # sys.stdout.flush()
+    # sys.stdout.write("\b" * (toolbar_width + 1))  # return to start of line, after '['
+
+    for x in tqdm(input_angles_x):
+
         for y in input_angles_y:
-            input_adjusted.angle_y_centre=y
+            input_adjusted = input_parameters(input.wavelength, input.lens_NA, x, y, input.effective_beam_size)
             [diffraction_image_temp, total_power_collected_temp, E2_grating_temp,E2_envelope_temp] = calculate_diffraction_pattern_image(input_adjusted,
                                                                                                               output,
                                                                                                               dmd)
@@ -159,6 +180,9 @@ def diff_image_integrated_input_NA(input, output, dmd,integration_points):
             E2_grating=E2_grating+E2_grating_temp
             E2_envelope=E2_envelope+E2_envelope_temp
 
-        print('input angle' + str(x)+','+str(y))
+    #     sys.stdout.write("-")
+    #     sys.stdout.flush()
+    #
+    # sys.stdout.write("]\n")  # this ends the progress bar
 
     return [diffraction_image,total_power_collected,E2_grating,E2_envelope]
