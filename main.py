@@ -12,7 +12,7 @@ nm=10**-9
 #initialize system
 dmd=DMD_parameters('Standard',10.8*um,0.99,np.radians(12))
 input=input_parameters(600*nm,0.05,np.radians(8.54),np.radians(-8.54),10*um)
-output=output_parameters(0.045,np.radians(8.54),np.radians(-8.54),200)
+output=output_parameters(0.045,np.radians(8.54),np.radians(-8.54),20)
 wavelengths=np.arange(400*nm,750*nm,10*nm)
 #wavelengths=np.arange(400*nm,750*nm,20*nm)
 transmission_collected_integrated=np.zeros((np.size(wavelengths)))
@@ -26,7 +26,7 @@ for i in np.arange(np.size(wavelengths)):
      input.wavelength=wavelengths[i]
      [_,total_power_collected,_,_]=calculate_diffraction_pattern_image(input, output, dmd)
      transmission_collected[i] = total_power_collected
-     [diffraction_image,total_power_collected_integrated,E2_grating,E2_envelope]=diff_image_integrated_input_NA(input, output, dmd, 20)
+     [diffraction_image,total_power_collected_integrated,E2_grating,E2_envelope]=diff_image_integrated_input_NA(input, output, dmd, 10)
      transmission_collected_integrated[i] = total_power_collected_integrated
      print('Wavelength =' +str(input.wavelength/nm)+'nm')
 
@@ -60,3 +60,4 @@ ax4.set_xlim((400,750))
 ax4.set_title('Transmission Function')
 
 plt.show()
+fig.savefig('Figure.png')
