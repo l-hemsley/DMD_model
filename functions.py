@@ -11,7 +11,7 @@ import time
 ###TO DO
 # sort normalization of E so that can calculate total power, and transmission as a percentage.
 # speed up timing
-# run other tests e.g. transmission vs NA, vs beam size
+# run other tests e.g. transmission vs NA, vs beam size, vs beam angle
 # save figures?
 
 class DMD_parameters:
@@ -35,9 +35,6 @@ class input_parameters:
         self.angle_y_centre = angle_y_centre
         self.effective_beam_size = effective_beam_size
         self.beam_vector = vector(self.angle_x_centre, self.angle_y_centre, 1)
-
-
-
 
 class output_parameters:
 
