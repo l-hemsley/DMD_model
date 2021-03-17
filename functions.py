@@ -13,6 +13,8 @@ import time
 # speed up timing
 # run other tests e.g. transmission vs NA, vs beam size, vs beam angle
 # save figures?
+#check mirror off direction
+#scaling of power/transmission
 
 class DMD_parameters:
 
@@ -62,24 +64,29 @@ class output_parameters:
 class vector:
     def __init__(self, angle_x, angle_y, direction):
         self.z = direction*1 / \
-            np.sqrt(np.tan(angle_x ** 2 + np.tan(angle_y) ** 2 + 1))
+            np.sqrt(np.tan(angle_x)** 2 + np.tan(angle_y) ** 2 + 1)
         self.x = self.z * np.tan(angle_x)
         self.y = self.z * np.tan(angle_y)
 
 
 def envelope_function(input, output, dmd):
+    #https://www.biorxiv.org/content/10.1101/2020.10.02.323527v1.supplementary-material
+    #https://www.biorxiv.org/content/10.1101/2020.07.27.223941v3.supplementary-material
+
+    #doesnt work for all mirror angles
     w = dmd.mirror_width
     c = np.cos(dmd.tilt_angle)
     s = np.sin(dmd.tilt_angle)
     a = input.beam_vector
     b = output.beam_vector
     diff = [a.x-b.x, a.y-b.y, a.z-b.z]
-    f1 = diff[0]*0.5*(1+c)+diff[1]*(0.5*(1-c))+diff[2]*(-s/np.sqrt(2))
-    f2 = diff[0] * (0.5 * (1 - c)) + diff[1] * \
-        (0.5 * (1 + c)) + diff[2] * ( s / np.sqrt(2))
-    A = 2*np.pi*f1/input.wavelength
-    B = 2 * np.pi * f2 / input.wavelength
-    data = (2/A)*(2/B)*np.sin(A*w/2)*np.sin(B*w/2)
+
+    f1 = diff[0]*0.5*(1+c)+diff[1]*-0.5*(1-c)+diff[2]*(s/np.sqrt(2))
+    f2 = diff[0] * -0.5 * (1 - c) + diff[1] * 0.5 * (1 + c) + diff[2] * ( s / np.sqrt(2))
+
+    A = np.pi*f1*w/input.wavelength
+    B = np.pi * f2*w/ input.wavelength
+    data =np.sin(A)*np.sin(B)/(A*B)
     return data
 
 
@@ -127,7 +134,7 @@ def grating_function(input, output, dmd):
 
 def calculate_diffraction_pattern_image(input, output, dmd):
     E2_grating = grating_function(input, output, dmd) ** 2
-    E2_envelope = envelope_function(input, output, dmd) ** 2
+    E2_envelope = envelope_function(input, output, dmd) **2
     diffraction_image = E2_grating * E2_envelope
     image_collected = diffraction_image * output.collected_vectors
     total_power_collected=np.sum(np.sum(image_collected))
