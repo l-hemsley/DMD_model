@@ -26,7 +26,7 @@ for i in np.arange(np.size(wavelengths)):
      input.wavelength=wavelengths[i]
      [_,total_power_collected,_,_]=calculate_diffraction_pattern_image(input, output, dmd)
      transmission_collected[i] = total_power_collected
-     [diffraction_image,total_power_collected_integrated,E2_grating,E2_envelope]=diff_image_integrated_input_NA(input, output, dmd, 20)
+     [diffraction_image,total_power_collected_integrated,E2_grating,E2_envelope]=diff_image_integrated_input_NA(input, output, dmd, 1)
      transmission_collected_integrated[i] = total_power_collected_integrated
      print('Wavelength =' +str(input.wavelength/nm)+'nm')
 
