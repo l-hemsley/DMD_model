@@ -12,8 +12,6 @@ import time
 # sort normalization of E so that can calculate total power, and transmission as a percentage.
 # speed up timing
 # run other tests e.g. transmission vs NA, vs beam size, vs beam angle
-# save figures?
-#check mirror off direction
 #scaling of power/transmission
 
 class DMD_parameters:
@@ -64,7 +62,7 @@ class output_parameters:
 class vector:
     def __init__(self, angle_x, angle_y, direction):
         self.z = direction*1 / \
-            np.sqrt(np.tan(angle_x)** 2 + np.tan(angle_y) ** 2 + 1)
+            np.sqrt(1-np.tan(angle_x)** 2-np.tan(angle_y) ** 2)
         self.x = self.z * np.tan(angle_x)
         self.y = self.z * np.tan(angle_y)
 
@@ -73,7 +71,7 @@ def envelope_function(input, output, dmd):
     #https://www.biorxiv.org/content/10.1101/2020.10.02.323527v1.supplementary-material
     #https://www.biorxiv.org/content/10.1101/2020.07.27.223941v3.supplementary-material
 
-    #doesnt work for all mirror angles
+    #doesnt work for all mirror angles DO NOT TRUST THIS!!!!!!!!
     w = dmd.mirror_width
     c = np.cos(dmd.tilt_angle)
     s = np.sin(dmd.tilt_angle)
@@ -81,8 +79,8 @@ def envelope_function(input, output, dmd):
     b = output.beam_vector
     diff = [a.x-b.x, a.y-b.y, a.z-b.z]
 
-    f1 = diff[0]*0.5*(1+c)+diff[1]*-0.5*(1-c)+diff[2]*(s/np.sqrt(2))
-    f2 = diff[0] * -0.5 * (1 - c) + diff[1] * 0.5 * (1 + c) + diff[2] * ( s / np.sqrt(2))
+    f1 = diff[0]*0.5*(1+c)+diff[1]*0.5*(1-c)+diff[2]*(-s/np.sqrt(2))
+    f2 = diff[0] * 0.5 * (1 - c) + diff[1] * 0.5 * (1 + c) + diff[2] * ( s / np.sqrt(2))
 
     A = np.pi*f1*w/input.wavelength
     B = np.pi * f2*w/ input.wavelength
