@@ -11,8 +11,7 @@ import time
 ###TO DO
 # sort normalization of E so that can calculate total power, and transmission as a percentage.
 # speed up timing
-# run other tests e.g. transmission vs NA, vs beam size, vs beam angle
-#scaling of power/transmission
+# scaling of power/transmission
 
 class DMD_parameters:
 
