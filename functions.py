@@ -1,7 +1,9 @@
 import numpy as np
+import scipy as sp
 import matplotlib.pyplot as plt
 import pandas as pd
 from functions import *
+from scipy.special import j1
 import sys
 from tqdm import tqdm
 import time
@@ -11,7 +13,7 @@ import time
 ###TO DO
 # sort normalization of E so that can calculate total power, and transmission as a percentage.
 # speed up timing
-# scaling of power/transmission
+# camera pixel location
 
 class DMD_parameters:
 
@@ -26,20 +28,20 @@ class DMD_parameters:
 
 class input_parameters:
 
-    def __init__(self, wavelength, lens_NA, angle_x_centre, angle_y_centre, effective_beam_size):
+    def __init__(self, wavelength, lens_NA, angle_x_centre, angle_y_centre, focal_length):
         self.wavelength = wavelength
         self.lens_NA = lens_NA
+        self.focal_length=focal_length
         self.half_angle = np.arcsin(lens_NA)
         self.angle_x_centre = angle_x_centre
         self.angle_y_centre = angle_y_centre
-        self.effective_beam_size = effective_beam_size
         self.beam_vector = vector(self.angle_x_centre, self.angle_y_centre, 1)
 
 class output_parameters:
 
     def __init__(self, lens_NA, angle_x_centre, angle_y_centre, datapoints):
         self.lens_NA = lens_NA
-        self.half_angle = np.arcsin(lens_NA)
+        self.half_angle = 2*np.arcsin(lens_NA)
         self.angle_x_centre = angle_x_centre
         self.angle_y_centre = angle_y_centre
         self.datapoint = datapoints
@@ -56,6 +58,7 @@ class output_parameters:
         self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed-angle_x_centre)**2+(self.angle_y_array_meshed-self.angle_y_centre)**2)
         self.collected_vectors = self.effective_angle_of_vector < self.half_angle
+        self.collected_vectors_triangle=abs(self.half_angle-self.effective_angle_of_vector)
 
 
 class vector:
@@ -70,7 +73,6 @@ def envelope_function(input, output, dmd):
     #https://www.biorxiv.org/content/10.1101/2020.10.02.323527v1.supplementary-material
     #https://www.biorxiv.org/content/10.1101/2020.07.27.223941v3.supplementary-material
 
-    #doesnt work for all mirror angles DO NOT TRUST THIS!!!!!!!!
     w = dmd.mirror_width
     c = np.cos(dmd.tilt_angle)
     s = np.sin(dmd.tilt_angle)
@@ -117,25 +119,44 @@ def gaussian2D_normalized(x, x0, y, y0, w):
     return value
 
 
+def jinc(x):
+    if x.all() == 0.0:
+        return 0.5
+    return j1(x) / x
+
+def jinc_functions(x, x0, y, y0, a,wavelength,f):
+    print(a)
+    value =(2*np.pi*a**2/(4*wavelength*f))*jinc((np.pi*a/wavelength)*np.sqrt(np.tan(x-x0)**2+np.tan(y-y0)**2))
+    return value
+
+
 def grating_function(input, output, dmd):
     [order_angles_x, order_angles_y] = calculate_orders(input, output, dmd)
     data = np.zeros((output.datapoint, output.datapoint))
 
-    sigma = input.wavelength/(2*input.effective_beam_size*np.pi)
+    effective_beam_size=4*input.wavelength/(np.pi*input.lens_NA)
+    sigma = input.wavelength/(2*effective_beam_size*np.pi)
 
     for order_x in order_angles_x:
         for order_y in order_angles_y:
             data = data+gaussian2D_normalized(output.angle_x_array_meshed,
                                               order_x, output.angle_y_array_meshed, order_y, sigma)
+            #data = data+jinc_functions(output.angle_x_array_meshed,
+             #                                 order_x, output.angle_y_array_meshed, order_y, 2*(input.focal_length)*input.lens_NA, input.wavelength, input.focal_length)
     return data
 
 def calculate_diffraction_pattern_image(input, output, dmd):
     E2_grating = grating_function(input, output, dmd) ** 2
     E2_envelope = envelope_function(input, output, dmd) **2
     diffraction_image = E2_grating * E2_envelope
-    image_collected = diffraction_image * output.collected_vectors
+    #image_collected = diffraction_image * output.collected_vectors
+    image_collected = diffraction_image * output.collected_vectors_triangle
     total_power_collected=np.sum(np.sum(image_collected))
+
+
     return [diffraction_image,total_power_collected,E2_grating,E2_envelope]
+
+
 
 def diff_image_integrated_input_NA(input, output, dmd,integration_points):
 
