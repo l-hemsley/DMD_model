@@ -32,6 +32,12 @@ class input_parameters:
         self.angle_y_centre = angle_y_centre
         self.beam_vector = vector(self.angle_x_centre, self.angle_y_centre, 1)
 
+        # #offset
+         #self.offset_x=offset_x
+        # self.offset_y = offset_y
+       #self.angle_x_centre = np.atan((self.focal_length*np.cos(self.angle_x_centre)+offset_x)/self.focal_length*np.sin(self.angle_x_centre))
+       # self.angle_y_centre = np.atan((self.focal_length*np.cos(self.angle_y_centre)+offset_y)/self.focal_length*np.sin(self.angle_y_centre))
+
 class output_parameters:
 
     def __init__(self, lens_NA, angle_x_centre, angle_y_centre, datapoints):
@@ -53,8 +59,20 @@ class output_parameters:
         self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed-angle_x_centre)**2+(self.angle_y_array_meshed-self.angle_y_centre)**2)
         self.collected_vectors = self.effective_angle_of_vector < self.half_angle
+<<<<<<< HEAD
         self.collected_vectors_triangle=abs(2*self.half_angle-self.effective_angle_of_vector)
+=======
+        self.collected_vectors_triangle=abs(2*self.half_angle-self.effective_angle_of_vector)*self.collected_vectors
+>>>>>>> 2f6e068ce994767c094452733a178d539cedcccd
 
+        # #offset
+        # self.offset_x=offset_x
+        # self.angle_x_array = np.linspace(
+        #     np.atan(self.D/2*self.F-self.offset_x/self.F), np.atan(self.D/2*self.F+self.offset_x/self.F), datapoints)
+        # self.offset_y = offset_y
+        # self.angle_y_array = np.linspace(
+        #     np.atan(self.D / 2 * self.F - self.offset_y / self.F),
+        #     np.atan(self.D / 2 * self.F + self.offset_y / self.F), datapoints)
 
 class vector:
     def __init__(self, angle_x, angle_y, direction):
@@ -65,8 +83,10 @@ class vector:
 
 
 def envelope_function(input, output, dmd):
+
+    #envelope function for tilted mirror
+    #paper reference; Simulating digital micromirror devices for patterning coherent excitation light in structured illumination microscopy
     #https://www.biorxiv.org/content/10.1101/2020.10.02.323527v1.supplementary-material
-    #https://www.biorxiv.org/content/10.1101/2020.07.27.223941v3.supplementary-material
 
     w = dmd.mirror_width
     c = np.cos(dmd.tilt_angle)
@@ -80,11 +100,13 @@ def envelope_function(input, output, dmd):
 
     A = np.pi*f1*w/input.wavelength
     B = np.pi * f2*w/ input.wavelength
-    data =np.sin(A)*np.sin(B)/(A*B)
+    data =w**2*np.sin(A)*np.sin(B)/(A*B)
+
     return data
 
 
 def calculate_orders(input, output, DMD):
+
     # find range of orders which fit in the output lens
     # for x angles
     alpha_x = input.angle_x_centre
@@ -116,13 +138,24 @@ def gaussian2D_normalized(x, x0, y, y0, w):
 def grating_function(input, output, dmd):
     [order_angles_x, order_angles_y] = calculate_orders(input, output, dmd)
     data = np.zeros((output.datapoint, output.datapoint))
+<<<<<<< HEAD
     effective_beam_size=4*input.wavelength/(np.pi*input.lens_NA)# from FT of lens
+=======
+
+    #effective beam size depends on the lens NA - given by minimum beam waist of focused gaussian beam
+    m=1
+    effective_beam_size=4*input.wavelength/(np.pi*input.lens_NA)/m
+>>>>>>> 2f6e068ce994767c094452733a178d539cedcccd
     sigma = input.wavelength/(2*effective_beam_size*np.pi)
 
     for order_x in order_angles_x:
         for order_y in order_angles_y:
             data = data+gaussian2D_normalized(output.angle_x_array_meshed,
                                               order_x, output.angle_y_array_meshed, order_y, sigma)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2f6e068ce994767c094452733a178d539cedcccd
     return data
 
 def calculate_diffraction_pattern_image(input, output, dmd):
@@ -135,3 +168,7 @@ def calculate_diffraction_pattern_image(input, output, dmd):
     total_power_collected_triangle= np.sum(np.sum(image_collected_triangle))
     return [diffraction_image,total_power_collected,total_power_collected_triangle,E2_grating,E2_envelope]
 
+<<<<<<< HEAD
+=======
+    return [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected ]
+>>>>>>> 2f6e068ce994767c094452733a178d539cedcccd
