@@ -59,11 +59,9 @@ class output_parameters:
         self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed-angle_x_centre)**2+(self.angle_y_array_meshed-self.angle_y_centre)**2)
         self.collected_vectors = self.effective_angle_of_vector < self.half_angle
-<<<<<<< HEAD
-        self.collected_vectors_triangle=abs(2*self.half_angle-self.effective_angle_of_vector)
-=======
+
         self.collected_vectors_triangle=abs(2*self.half_angle-self.effective_angle_of_vector)*self.collected_vectors
->>>>>>> 2f6e068ce994767c094452733a178d539cedcccd
+
 
         # #offset
         # self.offset_x=offset_x
@@ -138,24 +136,19 @@ def gaussian2D_normalized(x, x0, y, y0, w):
 def grating_function(input, output, dmd):
     [order_angles_x, order_angles_y] = calculate_orders(input, output, dmd)
     data = np.zeros((output.datapoint, output.datapoint))
-<<<<<<< HEAD
-    effective_beam_size=4*input.wavelength/(np.pi*input.lens_NA)# from FT of lens
-=======
+
 
     #effective beam size depends on the lens NA - given by minimum beam waist of focused gaussian beam
     m=1
     effective_beam_size=4*input.wavelength/(np.pi*input.lens_NA)/m
->>>>>>> 2f6e068ce994767c094452733a178d539cedcccd
+
     sigma = input.wavelength/(2*effective_beam_size*np.pi)
 
     for order_x in order_angles_x:
         for order_y in order_angles_y:
             data = data+gaussian2D_normalized(output.angle_x_array_meshed,
                                               order_x, output.angle_y_array_meshed, order_y, sigma)
-<<<<<<< HEAD
-=======
 
->>>>>>> 2f6e068ce994767c094452733a178d539cedcccd
     return data
 
 def calculate_diffraction_pattern_image(input, output, dmd):
@@ -166,9 +159,7 @@ def calculate_diffraction_pattern_image(input, output, dmd):
     image_collected_triangle = diffraction_image * output.collected_vectors_triangle
     total_power_collected=np.sum(np.sum(image_collected))
     total_power_collected_triangle= np.sum(np.sum(image_collected_triangle))
-    return [diffraction_image,total_power_collected,total_power_collected_triangle,E2_grating,E2_envelope]
+    #return [diffraction_image,total_power_collected,total_power_collected_triangle,E2_grating,E2_envelope]
 
-<<<<<<< HEAD
-=======
     return [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected ]
->>>>>>> 2f6e068ce994767c094452733a178d539cedcccd
+
