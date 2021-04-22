@@ -12,8 +12,11 @@ import time
 
 class DMD_parameters:
 
-    def __init__(self, name, pitch, fill_factor,  tilt_angle):
-        self.name = name
+# class for parameters related to the DMD.
+# TODO - Could include DMD mask pattern info here?
+# TODO - Also should include mask x/y dimensions but so far this is neglected in the diffraction pattern as the effect is small.
+
+    def __init__(self, pitch, fill_factor,  tilt_angle):
         self.pitch = pitch
         self.fill_factor = fill_factor
         self.mirror_width = pitch*fill_factor
@@ -21,7 +24,20 @@ class DMD_parameters:
         self.tilt_angle = tilt_angle
 
 
+class vector:
+
+# class makes normalized 3D unit vector from x and y angles
+
+    def __init__(self, angle_x, angle_y, direction):
+        self.z = direction * 1 / \
+                 np.sqrt(1 - np.tan(angle_x) ** 2 - np.tan(angle_y) ** 2)
+        self.x = self.z * np.tan(angle_x)
+        self.y = self.z * np.tan(angle_y)
+
 class input_parameters:
+
+# class related to so-called 'input parameters' of the system before the DMD, for example, the focusing lens parameters and wavelength.
+# TODO - What if there is no input lens?
 
     def __init__(self, wavelength, lens_NA, angle_x_centre, angle_y_centre, focal_length):
         self.wavelength = wavelength
@@ -32,13 +48,13 @@ class input_parameters:
         self.angle_y_centre = angle_y_centre
         self.beam_vector = vector(self.angle_x_centre, self.angle_y_centre, 1)
 
-        # #offset
-         #self.offset_x=offset_x
-        # self.offset_y = offset_y
-       #self.angle_x_centre = np.atan((self.focal_length*np.cos(self.angle_x_centre)+offset_x)/self.focal_length*np.sin(self.angle_x_centre))
-       # self.angle_y_centre = np.atan((self.focal_length*np.cos(self.angle_y_centre)+offset_y)/self.focal_length*np.sin(self.angle_y_centre))
 
 class output_parameters:
+
+# class related to the 'output parameters' of the system after the DMD, for example the collection lens.
+# This is useful for working out which bit of the diffraction pattern is relevant
+# gives the 2D array of discretized angles used to build the diffraction pattern image
+
 
     def __init__(self, lens_NA, angle_x_centre, angle_y_centre, datapoints):
         self.lens_NA = lens_NA
@@ -56,35 +72,21 @@ class output_parameters:
             self.angle_x_array, self.angle_y_array)
         self.beam_vector = vector(self.angle_x_array_meshed,
                              self.angle_y_array_meshed, -1)
+
+        # params below for finding which angles are within the NA of the lens
         self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed-angle_x_centre)**2+(self.angle_y_array_meshed-self.angle_y_centre)**2)
+        # collected vectors are the angles which fall within the 'half angle' defined by the NA of the output lens. i.e. which vectors can be collected.
         self.collected_vectors = self.effective_angle_of_vector < self.half_angle
-
+        # this weights the vectors using a triangle function (max in the centre, to zero at 2* the half angle) to account for the lens MTF
+        # TODO - check this is correct method to account for lens MTF
         self.collected_vectors_triangle=abs(2*self.half_angle-self.effective_angle_of_vector)*self.collected_vectors
-
-
-        # #offset
-        # self.offset_x=offset_x
-        # self.angle_x_array = np.linspace(
-        #     np.atan(self.D/2*self.F-self.offset_x/self.F), np.atan(self.D/2*self.F+self.offset_x/self.F), datapoints)
-        # self.offset_y = offset_y
-        # self.angle_y_array = np.linspace(
-        #     np.atan(self.D / 2 * self.F - self.offset_y / self.F),
-        #     np.atan(self.D / 2 * self.F + self.offset_y / self.F), datapoints)
-
-class vector:
-    def __init__(self, angle_x, angle_y, direction):
-        self.z = direction*1 / \
-            np.sqrt(1-np.tan(angle_x)** 2-np.tan(angle_y) ** 2)
-        self.x = self.z * np.tan(angle_x)
-        self.y = self.z * np.tan(angle_y)
-
 
 def envelope_function(input, output, dmd):
 
-    #envelope function for tilted mirror
-    #paper reference; Simulating digital micromirror devices for patterning coherent excitation light in structured illumination microscopy
-    #https://www.biorxiv.org/content/10.1101/2020.10.02.323527v1.supplementary-material
+    # this calculated the diffraction pattern for the tilted mirror, which is used as the envelope function for the entire diffraction pattern
+    #Calculated using equation given in; 'Simulating digital micromirror devices for patterning coherent excitation light in structured illumination microscopy'
+    #link = https://www.biorxiv.org/content/10.1101/2020.10.02.323527v1.supplementary-material
 
     w = dmd.mirror_width
     c = np.cos(dmd.tilt_angle)
@@ -105,7 +107,9 @@ def envelope_function(input, output, dmd):
 
 def calculate_orders(input, output, DMD):
 
-    # find range of orders which fit in the output lens
+    #this function calculates the angular location of diffraction orders due to the DMD periodicity in x and y
+    #keeps only the orders which fall within the 'half angle' defined by the collection lens
+
     # for x angles
     alpha_x = input.angle_x_centre
     beta_x = output.angle_x_centre
@@ -134,14 +138,18 @@ def gaussian2D_normalized(x, x0, y, y0, w):
 
 
 def grating_function(input, output, dmd):
+
+    # this function gives the diffraction pattern due to the DMD periodicity
+    # this function puts a guassian function (FT of a the assumed gaussian spot on the DMD) wherever there is an order
+    # equivalent to FT of beam convoluted with the 2D array of delta functions
+    # TODO - could include mask here? better way to do convolution?
+
     [order_angles_x, order_angles_y] = calculate_orders(input, output, dmd)
     data = np.zeros((output.datapoint, output.datapoint))
 
-
-    #effective beam size depends on the lens NA - given by minimum beam waist of focused gaussian beam
-    m=1
-    effective_beam_size=4*input.wavelength/(np.pi*input.lens_NA)/m
-
+    # we assume that the effective beam size depends on the input lens NA - given by minimum beam waist of focused gaussian beam.
+    # TODO - another way to define this?
+    effective_beam_size=4*input.wavelength/(np.pi*input.lens_NA)
     sigma = input.wavelength/(2*effective_beam_size*np.pi)
 
     for order_x in order_angles_x:
@@ -152,14 +160,20 @@ def grating_function(input, output, dmd):
     return data
 
 def calculate_diffraction_pattern_image(input, output, dmd):
+
+    #gives the diffraction pattern
+
     E2_grating = grating_function(input, output, dmd) ** 2
     E2_envelope = envelope_function(input, output, dmd) **2
     diffraction_image = E2_grating * E2_envelope
-    image_collected = diffraction_image * output.collected_vectors
+
+    #calculate total power collected by lens
+
+    #image_collected = diffraction_image * output.collected_vectors
     image_collected_triangle = diffraction_image * output.collected_vectors_triangle
-    total_power_collected=np.sum(np.sum(image_collected))
+    #total_power_collected=np.sum(np.sum(image_collected))
     total_power_collected_triangle= np.sum(np.sum(image_collected_triangle))
-    #return [diffraction_image,total_power_collected,total_power_collected_triangle,E2_grating,E2_envelope]
+    total_power_collected=total_power_collected_triangle
 
     return [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected ]
 

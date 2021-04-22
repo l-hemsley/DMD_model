@@ -5,16 +5,19 @@ from functions import *
 
 import time
 
-
 #useful constants
 mm=10**-3
 um=10**-6
 nm=10**-9
 
-#initialize system
-dmd=DMD_parameters('Standard',10.8*um,0.98,np.radians(12))
-input=input_parameters(600*nm,0.05,np.radians(8.54),np.radians(-8.54),150*mm)
-output=output_parameters(0.05,np.radians(8.54),np.radians(-8.54),100)
+#initialize system using the settings from the prototype
+
+
+dmd=DMD_parameters(10.8*um,0.98,np.radians(12)) #DMD_parameters(pitch, fill_factor,  tilt_angle)
+input=input_parameters(600*nm,0.05,np.radians(8.54),np.radians(-8.54),150*mm) #input_parameters(wavelength, lens_NA, angle_x_centre, angle_y_centre, focal_length)
+output=output_parameters(0.05,np.radians(8.54),np.radians(-8.54),100) #output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints)
+
+#wavelength array to look at
 wavelengths=np.arange(400*nm,750*nm,5*nm)
 transmission_collected=np.zeros((np.size(wavelengths)))
 
