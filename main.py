@@ -19,23 +19,26 @@ input=input_parameters(600*nm,0.05,np.radians(8.54),np.radians(-8.54),150*mm)
 # output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints)
 output=output_parameters(0.05,np.radians(8.54),np.radians(-8.54),100)
 
-#wavelength array to look at
+#wavelength range of interest
 wavelengths=np.arange(400*nm,750*nm,5*nm)
 transmission_collected=np.zeros((np.size(wavelengths)))
-
-
-#simulation run over wavelengths
-
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
 
-
+#The model is run over the wavelength range, producing a diffraction pattern for each wavelength
 for i in np.arange(np.size(wavelengths)):
 
      t = time.time()
      input.wavelength=wavelengths[i]
 
      [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected]=calculate_diffraction_pattern_image(input, output, dmd)
-     transmission_collected[i] = total_power_collected#
+
+     elapsed = time.time() - t
+     print('calculation time elapsed = '+str(elapsed))
+     t = time.time()
+
+     # TODO - how to normalize the tranmission?
+     transmission_collected[i] = total_power_collected
+
      print('Wavelength =' + str(np.round(input.wavelength/nm,0))+'nm')
 
      #plot results
@@ -51,33 +54,32 @@ for i in np.arange(np.size(wavelengths)):
      ax2.set_title('Mirror Envelope')
      ax3.set_title('Combined Diffraction Pattern')
      ax4.set_title('Collected Image')
-     if i==0:
-          cbar1=plt.colorbar(im1, ax=ax1)
-          cbar2 = plt.colorbar(im2, ax=ax2)
-          cbar3 = plt.colorbar(im3, ax=ax3)
-          cbar4 = plt.colorbar(im4, ax=ax4)
-     else:
-           cbar1.update_normal(im1)
-           cbar2.update_normal(im2)
-           cbar3.update_normal(im3)
-           cbar4.update_normal(im4)
+     # if i==0:
+     #      cbar1=plt.colorbar(im1, ax=ax1)
+     #      cbar2 = plt.colorbar(im2, ax=ax2)
+     #      cbar3 = plt.colorbar(im3, ax=ax3)
+     #      cbar4 = plt.colorbar(im4, ax=ax4)
+     # else:
+     #       cbar1.update_normal(im1)
+     #       cbar2.update_normal(im2)
+     #       cbar3.update_normal(im3)
+     #       cbar4.update_normal(im4)
 
      fig.tight_layout()
      plt.pause(0.0001)
      elapsed = time.time() - t
-     print('elapsed = '+str(elapsed))
+     print('plotting time elapsed = '+str(elapsed))
      ax1.cla()
      ax2.cla()
      ax3.cla()
      ax4.cla()
 
 
-#import experimental data
+#import experimental data for comparison
 
 experimental_data=pd.read_excel(r'experimental.xlsx')
 wavelengths_experimental=experimental_data.loc[:,'Wavelength'].to_numpy()
 transmission_experimental=experimental_data.loc[:,'Transmission'].to_numpy()
-
 
 plt.clf()
 plt.plot(wavelengths/nm,transmission_collected/max(transmission_collected))

@@ -62,6 +62,7 @@ class output_parameters:
         self.angle_x_centre = angle_x_centre
         self.angle_y_centre = angle_y_centre
         self.datapoint = datapoints
+        #array of output angles to display for diffraction image (change this to be larger than the NA of the lens??)
         self.angle_x_array = np.linspace(
             angle_x_centre-self.half_angle, angle_x_centre+self.half_angle, datapoints)
         self.angle_y_array = np.linspace(
@@ -78,8 +79,8 @@ class output_parameters:
             (self.angle_x_array_meshed-angle_x_centre)**2+(self.angle_y_array_meshed-self.angle_y_centre)**2)
         # collected vectors are the angles which fall within the 'half angle' defined by the NA of the output lens. i.e. which vectors can be collected.
         self.collected_vectors = self.effective_angle_of_vector < self.half_angle
-        # this weights the vectors using a triangle function (max in the centre, to zero at 2* the half angle) to account for the lens MTF
-        # TODO - check this is correct method to account for lens MTF
+        # this weights the vectors using a triangle function (max in the centre, to zero at 2* the half angle) to account for the lens MTF, times be the collected vectors
+        # TODO - check this is correct method to account for lens MTF - do we need wider angle?
         self.collected_vectors_triangle=abs(2*self.half_angle-self.effective_angle_of_vector)*self.collected_vectors
 
 def envelope_function(input, output, dmd):
@@ -107,29 +108,29 @@ def envelope_function(input, output, dmd):
 
 def calculate_orders(input, output, DMD):
 
-    #this function calculates the angular location of diffraction orders due to the DMD periodicity in x and y
+    #this function calculates the angular location of diffraction orders in x and y
     #keeps only the orders which fall within the 'half angle' defined by the collection lens
 
-    # for x angles
+    # for x
     alpha_x = input.angle_x_centre
     beta_x = output.angle_x_centre
     half_angle = output.half_angle
-    order_x_max = np.ceil(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x+half_angle))/input.wavelength)
-    order_x_min = np.floor(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x-half_angle))/input.wavelength)
-    order_array_x = np.arange(order_x_min-1, order_x_max+1, 1)
-    order_angles_x = np.arcsin(
-        order_array_x*input.wavelength/DMD.pitch-np.sin(alpha_x))
+    order_mx_max = np.ceil(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x+half_angle))/input.wavelength)
+    order_mx_min = np.floor(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x-half_angle))/input.wavelength)
+    order_array_mx = np.arange(order_mx_min-1, order_mx_max+1, 1)
+    order_angles_mx = np.arcsin(
+        order_array_mx*input.wavelength/DMD.pitch-np.sin(alpha_x))
 
-    #for y angles
+    #for y
     alpha_y = input.angle_y_centre
     beta_y = output.angle_y_centre
-    order_y_max = np.ceil(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y + half_angle)) / input.wavelength)
-    order_y_min = np.floor(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y - half_angle)) / input.wavelength)
-    order_array_y = np.arange(order_y_min-1, order_y_max+1, 1)
-    order_angles_y = np.arcsin(
-        order_array_y * input.wavelength / DMD.pitch - np.sin(alpha_y))
+    order_my_max = np.ceil(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y + half_angle)) / input.wavelength)
+    order_my_min = np.floor(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y - half_angle)) / input.wavelength)
+    order_array_my = np.arange(order_my_min-1, order_my_max+1, 1)
+    order_angles_my = np.arcsin(
+        order_array_my * input.wavelength / DMD.pitch - np.sin(alpha_y))
 
-    return order_angles_x, order_angles_y
+    return order_angles_mx, order_angles_my
 
 
 def gaussian2D_normalized(x, x0, y, y0, w):
@@ -144,7 +145,7 @@ def grating_function(input, output, dmd):
     # equivalent to FT of beam convoluted with the 2D array of delta functions
     # TODO - could include mask here? better way to do convolution?
 
-    [order_angles_x, order_angles_y] = calculate_orders(input, output, dmd)
+    [order_angles_mx, order_angles_my] = calculate_orders(input, output, dmd)
     data = np.zeros((output.datapoint, output.datapoint))
 
     # we assume that the effective beam size depends on the input lens NA - given by minimum beam waist of focused gaussian beam.
@@ -152,16 +153,17 @@ def grating_function(input, output, dmd):
     effective_beam_size=4*input.wavelength/(np.pi*input.lens_NA)
     sigma = input.wavelength/(2*effective_beam_size*np.pi)
 
-    for order_x in order_angles_x:
-        for order_y in order_angles_y:
+    for angle_mx in order_angles_mx:
+        for angle_my in order_angles_my:
+            #place gaussian at each order location
             data = data+gaussian2D_normalized(output.angle_x_array_meshed,
-                                              order_x, output.angle_y_array_meshed, order_y, sigma)
+                                              angle_mx, output.angle_y_array_meshed, angle_my, sigma)
 
     return data
 
 def calculate_diffraction_pattern_image(input, output, dmd):
 
-    #gives the diffraction pattern
+    #gives the diffraction pattern in intensity
 
     E2_grating = grating_function(input, output, dmd) ** 2
     E2_envelope = envelope_function(input, output, dmd) **2
@@ -175,5 +177,5 @@ def calculate_diffraction_pattern_image(input, output, dmd):
     total_power_collected_triangle= np.sum(np.sum(image_collected_triangle))
     total_power_collected=total_power_collected_triangle
 
-    return [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected ]
+    return [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected_triangle]
 
