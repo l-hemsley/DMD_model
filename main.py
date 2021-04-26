@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from functions import *
 
+#TODO - how to consider spatial offset, e.g. pixels that are off centre/corner of image
+
 import time
 
 #useful constants
@@ -12,15 +14,15 @@ nm=10**-9
 
 #initialize system using the paramters from the prototype
 
-#DMD_parameters(pitch, fill_factor,  tilt_angle)
-dmd=DMD_parameters(10.8*um,0.98,np.radians(12))
+#DMD_parameters(pitch, fill_factor, tilt_angle)
+dmd=DMD_parameters(10.8*um,0.96,np.radians(12))
 #input_parameters(wavelength, lens_NA, angle_x_centre, angle_y_centre, focal_length)
 input=input_parameters(600*nm,0.05,np.radians(8.54),np.radians(-8.54),150*mm)
 # output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints)
 output=output_parameters(0.05,np.radians(8.54),np.radians(-8.54),100)
 
 #wavelength range of interest
-wavelengths=np.arange(400*nm,750*nm,5*nm)
+wavelengths=np.arange(420*nm,700*nm,5*nm)
 transmission_collected=np.zeros((np.size(wavelengths)))
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
 
@@ -30,43 +32,37 @@ for i in np.arange(np.size(wavelengths)):
      t = time.time()
      input.wavelength=wavelengths[i]
 
+     #calculation diffraction image
      [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected]=calculate_diffraction_pattern_image(input, output, dmd)
 
      elapsed = time.time() - t
      print('calculation time elapsed = '+str(elapsed))
      t = time.time()
 
-     # TODO - how to normalize the tranmission?
+     # TODO - how to correctly normalize the tranmission?
      transmission_collected[i] = total_power_collected
-
+     #transmission_collected[i] = total_power_collected / np.sum(np.sum(diffraction_image))
      print('Wavelength =' + str(np.round(input.wavelength/nm,0))+'nm')
 
      #plot results
 
-     im1=ax1.contourf(np.degrees(output.angle_x_array_meshed),np.degrees(output.angle_y_array_meshed),E2_grating,100)
-     im2=ax2.contourf(np.degrees(output.angle_x_array_meshed),np.degrees(output.angle_y_array_meshed),E2_envelope,100)
-     im3=ax3.contourf(np.degrees(output.angle_x_array_meshed),np.degrees(output.angle_y_array_meshed),diffraction_image,100)
-     im4=ax4.contourf(np.degrees(output.angle_x_array_meshed),np.degrees(output.angle_y_array_meshed),image_collected,100)
-
-     fig.suptitle('Wavelength =' +str(np.round(input.wavelength/nm,0))+'nm', fontsize=16)
-     fig.savefig('Figures/wavelength' +str(np.round(input.wavelength/nm,0))+'nm' + '.png')
+     im1=ax1.contourf(np.degrees(output.angle_x_array_meshed),np.degrees(output.angle_y_array_meshed),E2_grating,50)
+     im2=ax2.contourf(np.degrees(output.angle_x_array_meshed),np.degrees(output.angle_y_array_meshed),E2_envelope,50)
+     im3=ax3.contourf(np.degrees(output.angle_x_array_meshed),np.degrees(output.angle_y_array_meshed),diffraction_image,50)
+     im4=ax4.contourf(np.degrees(output.angle_x_array_meshed),np.degrees(output.angle_y_array_meshed),image_collected,50)
      ax1.set_title('Grating Orders')
      ax2.set_title('Mirror Envelope')
      ax3.set_title('Combined Diffraction Pattern')
-     ax4.set_title('Collected Image')
-     # if i==0:
-     #      cbar1=plt.colorbar(im1, ax=ax1)
-     #      cbar2 = plt.colorbar(im2, ax=ax2)
-     #      cbar3 = plt.colorbar(im3, ax=ax3)
-     #      cbar4 = plt.colorbar(im4, ax=ax4)
-     # else:
-     #       cbar1.update_normal(im1)
-     #       cbar2.update_normal(im2)
-     #       cbar3.update_normal(im3)
-     #       cbar4.update_normal(im4)
+     ax4.set_title('Collected Image (w/ MTF)')
+     ax1.set_xlabel('output angle x degrees')
+     ax1.set_ylabel('output angle y degrees')
 
      fig.tight_layout()
-     plt.pause(0.0001)
+
+     fig.suptitle('Wavelength =' +str(np.round(input.wavelength/nm,0))+'nm', fontsize=16)
+     fig.savefig('Figures/wavelength' +str(np.round(input.wavelength/nm,0))+'nm' + '.png')
+
+     plt.pause(0.000001)
      elapsed = time.time() - t
      print('plotting time elapsed = '+str(elapsed))
      ax1.cla()
@@ -75,18 +71,19 @@ for i in np.arange(np.size(wavelengths)):
      ax4.cla()
 
 
-#import experimental data for comparison
+#import some experimental data for comparison
 
 experimental_data=pd.read_excel(r'experimental.xlsx')
 wavelengths_experimental=experimental_data.loc[:,'Wavelength'].to_numpy()
 transmission_experimental=experimental_data.loc[:,'Transmission'].to_numpy()
 
 plt.clf()
-plt.plot(wavelengths/nm,transmission_collected/max(transmission_collected))
+plt.plot(wavelengths/nm,transmission_collected/max(transmission_collected)) # normalized by maximum for now
 plt.plot(wavelengths_experimental,transmission_experimental)
 plt.ylim((0,1.2))
-plt.xlim((400,700))
-
+plt.xlim((420,700))
+plt.xlabel('Wavelengths (nm)')
+plt.ylabel('Transmission')
 fig.savefig('Figures/Transmission.png')
 plt.show()
 

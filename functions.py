@@ -81,7 +81,7 @@ class output_parameters:
         self.collected_vectors = self.effective_angle_of_vector < self.half_angle
         # this weights the vectors using a triangle function (max in the centre, to zero at 2* the half angle) to account for the lens MTF, times be the collected vectors
         # TODO - check this is correct method to account for lens MTF - do we need wider angle?
-        self.collected_vectors_triangle=abs(2*self.half_angle-self.effective_angle_of_vector)*self.collected_vectors
+        self.collected_vectors_MTF=abs(2*self.half_angle-self.effective_angle_of_vector)*self.collected_vectors
 
 def envelope_function(input, output, dmd):
 
@@ -133,8 +133,9 @@ def calculate_orders(input, output, DMD):
     return order_angles_mx, order_angles_my
 
 
-def gaussian2D_normalized(x, x0, y, y0, w):
-    value = np.exp(-0.5*((x-x0)**2+(y-y0)**2)/w**2)/(np.pi*w*np.sqrt(2))
+def gaussian2D_normalized(x, x0, y, y0, sigma):
+
+    value = np.exp(-0.5*((x-x0)**2+(y-y0)**2)/sigma**2)/(np.pi*sigma*np.sqrt(2))
     return value
 
 
@@ -172,10 +173,10 @@ def calculate_diffraction_pattern_image(input, output, dmd):
     #calculate total power collected by lens
 
     #image_collected = diffraction_image * output.collected_vectors
-    image_collected_triangle = diffraction_image * output.collected_vectors_triangle
+    image_collected_MTF = diffraction_image * output.collected_vectors_MTF
     #total_power_collected=np.sum(np.sum(image_collected))
-    total_power_collected_triangle= np.sum(np.sum(image_collected_triangle))
-    total_power_collected=total_power_collected_triangle
+    total_power_collected_MTF= np.sum(np.sum(image_collected_MTF))
+    total_power_collected=total_power_collected_MTF
 
-    return [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected_triangle]
+    return [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected_MTF]
 
