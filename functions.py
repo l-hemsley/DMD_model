@@ -10,6 +10,11 @@ import time
 # sort normalization of E so that can calculate total power, and transmission as a percentage.
 # camera pixel location
 
+#useful constants
+mm=10**-3
+um=10**-6
+nm=10**-9
+
 class DMD_parameters:
 
 # class for parameters related to the DMD.
@@ -77,11 +82,6 @@ class output_parameters:
         # params below for finding which angles are within the NA of the lens
         self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed-angle_x_centre)**2+(self.angle_y_array_meshed-self.angle_y_centre)**2)
-        # collected vectors are the angles which fall within the 'half angle' defined by the NA of the output lens. i.e. which vectors can be collected.
-        self.collected_vectors = self.effective_angle_of_vector < self.half_angle
-        # this weights the vectors using a triangle function (max in the centre, to zero at 2* the half angle) to account for the lens MTF, times be the collected vectors
-        # TODO - put MTF function stuff here (wavelength dependent!!)
-        self.collected_vectors_MTF=abs(2*self.half_angle-self.effective_angle_of_vector)*self.collected_vectors
 
 def envelope_function(input, output, dmd):
 
@@ -162,6 +162,14 @@ def grating_function(input, output, dmd):
 
     return data
 
+def MTF_function(spatial_frequency):
+    #approx function for lensfrom thorlabs TL200
+    #TODO - download actual data/calc actual MTF
+    k=spatial_frequency
+    k_max=200/mm
+    MTF=abs(1-k/k_max)#approx triangle function
+    return MTF
+
 def calculate_diffraction_pattern_image(input, output, dmd):
 
     #gives the diffraction pattern in intensity
@@ -171,9 +179,10 @@ def calculate_diffraction_pattern_image(input, output, dmd):
     diffraction_image = E2_grating * E2_envelope
 
     #calculate total power collected by lens
+    spatial_frequencies = input.wavelength/np.sin(output.effective_angle_of_vector)
 
     #image_collected = diffraction_image * output.collected_vectors
-    image_collected_MTF = diffraction_image * output.collected_vectors_MTF
+    image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies)
     #total_power_collected=np.sum(np.sum(image_collected))
     total_power_collected_MTF= np.sum(np.sum(image_collected_MTF))
     total_power_collected=total_power_collected_MTF

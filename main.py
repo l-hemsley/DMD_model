@@ -3,14 +3,16 @@ import numpy as np
 import pandas as pd
 from functions import *
 
-#TODO - how to consider spatial offset, e.g. pixels that are off centre/corner of image
-
 import time
 
 #useful constants
 mm=10**-3
 um=10**-6
 nm=10**-9
+
+
+#TODO - how to consider spatial offset, e.g. pixels that are off centre/corner of image
+#TODO - join input and output system? seperate wavelength?
 
 #initialize system using the paramters from the prototype
 
