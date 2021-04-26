@@ -80,7 +80,7 @@ class output_parameters:
         # collected vectors are the angles which fall within the 'half angle' defined by the NA of the output lens. i.e. which vectors can be collected.
         self.collected_vectors = self.effective_angle_of_vector < self.half_angle
         # this weights the vectors using a triangle function (max in the centre, to zero at 2* the half angle) to account for the lens MTF, times be the collected vectors
-        # TODO - check this is correct method to account for lens MTF - do we need wider angle?
+        # TODO - put MTF function stuff here (wavelength dependent!!)
         self.collected_vectors_MTF=abs(2*self.half_angle-self.effective_angle_of_vector)*self.collected_vectors
 
 def envelope_function(input, output, dmd):
