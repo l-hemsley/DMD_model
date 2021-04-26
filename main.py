@@ -42,8 +42,7 @@ for i in np.arange(np.size(wavelengths)):
      t = time.time()
 
      # TODO - how to correctly normalize the tranmission?
-     transmission_collected[i] = total_power_collected
-     #transmission_collected[i] = total_power_collected / np.sum(np.sum(diffraction_image))
+     transmission_collected[i] = total_power_collected / np.sum(np.sum(diffraction_image))
      print('Wavelength =' + str(np.round(input.wavelength/nm,0))+'nm')
 
      #plot results
@@ -62,7 +61,7 @@ for i in np.arange(np.size(wavelengths)):
      fig.tight_layout()
 
      fig.suptitle('Wavelength =' +str(np.round(input.wavelength/nm,0))+'nm', fontsize=16)
-     fig.savefig('Figures/wavelength' +str(np.round(input.wavelength/nm,0))+'nm' + '.png')
+     #fig.savefig('Figures/wavelength' +str(np.round(input.wavelength/nm,0))+'nm' + '.png')
 
      plt.pause(0.000001)
      elapsed = time.time() - t
@@ -80,7 +79,7 @@ wavelengths_experimental=experimental_data.loc[:,'Wavelength'].to_numpy()
 transmission_experimental=experimental_data.loc[:,'Transmission'].to_numpy()
 
 plt.clf()
-plt.plot(wavelengths/nm,transmission_collected/max(transmission_collected)) # normalized by maximum for now
+plt.plot(wavelengths/nm,transmission_collected) # normalized by maximum for now
 plt.plot(wavelengths_experimental,transmission_experimental)
 plt.ylim((0,1.2))
 plt.xlim((420,700))

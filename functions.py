@@ -67,11 +67,11 @@ class output_parameters:
         self.angle_x_centre = angle_x_centre
         self.angle_y_centre = angle_y_centre
         self.datapoint = datapoints
-        #array of output angles to display for diffraction image (change this to be larger than the NA of the lens??)
+        #array of output angles to display for diffraction image (1.5* NA of lens)
         self.angle_x_array = np.linspace(
-            angle_x_centre-self.half_angle, angle_x_centre+self.half_angle, datapoints)
+            angle_x_centre-1.5*self.half_angle, angle_x_centre+1.5*self.half_angle, datapoints)
         self.angle_y_array = np.linspace(
-            angle_y_centre - self.half_angle, angle_y_centre + self.half_angle, datapoints)
+            angle_y_centre - 1.5*self.half_angle, angle_y_centre + 1.5*self.half_angle, datapoints)
         self.angle_x_array_deg = np.degrees(self.angle_x_array)
         self.angle_y_array_deg = np.degrees(self.angle_y_array)
         [self.angle_x_array_meshed, self.angle_y_array_meshed] = np.meshgrid(
@@ -167,7 +167,9 @@ def MTF_function(spatial_frequency):
     #TODO - download actual data/calc actual MTF
     k=spatial_frequency
     k_max=200/mm
-    MTF=abs(1-k/k_max)#approx triangle function
+    MTF=1-k/k_max#approx triangle function
+    ids=MTF<0
+    MTF[ids]=0
     return MTF
 
 def calculate_diffraction_pattern_image(input, output, dmd):
@@ -179,13 +181,11 @@ def calculate_diffraction_pattern_image(input, output, dmd):
     diffraction_image = E2_grating * E2_envelope
 
     #calculate total power collected by lens
-    spatial_frequencies = input.wavelength/np.sin(output.effective_angle_of_vector)
+    spatial_frequencies = np.sin(output.effective_angle_of_vector)/input.wavelength # check this
 
     #image_collected = diffraction_image * output.collected_vectors
     image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies)
-    #total_power_collected=np.sum(np.sum(image_collected))
     total_power_collected_MTF= np.sum(np.sum(image_collected_MTF))
-    total_power_collected=total_power_collected_MTF
 
-    return [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected_MTF]
+    return [diffraction_image,total_power_collected_MTF,E2_grating,E2_envelope,image_collected_MTF]
 
