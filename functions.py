@@ -163,13 +163,19 @@ def grating_function(input, output, dmd):
     return data
 
 def MTF_function(spatial_frequency):
-    #approx function for lensfrom thorlabs TL200
-    #TODO - download actual data/calc actual MTF
-    k=spatial_frequency
-    k_max=200/mm
-    MTF=1-k/k_max#approx triangle function
-    ids=MTF<0
-    MTF[ids]=0
+
+    #TODO - add selection for different lenses?
+    experimental_data = pd.read_excel(r'TL200-MTF.xlsx')
+    spatial_frequency_data= experimental_data.loc[:, 'Spatial Frequency'].to_numpy()
+    MTF_data = experimental_data.loc[:, 'MTF'].to_numpy()
+    spatial_frequency_data=spatial_frequency_data/mm
+    MTF=np.interp(spatial_frequency,spatial_frequency_data,MTF_data)
+
+    # k=spatial_frequency
+    # k_max=200/mm
+    # MTF=1-k/k_max#approx triangle function
+    # ids=MTF<0
+    # MTF[ids]=0
     return MTF
 
 def calculate_diffraction_pattern_image(input, output, dmd):
