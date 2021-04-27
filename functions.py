@@ -67,11 +67,11 @@ class output_parameters:
         self.angle_x_centre = angle_x_centre
         self.angle_y_centre = angle_y_centre
         self.datapoint = datapoints
-        #array of output angles to display for diffraction image (1.5* NA of lens)
+        #array of output angles to display for diffraction image (2* NA of lens)
         self.angle_x_array = np.linspace(
-            angle_x_centre-1.5*self.half_angle, angle_x_centre+1.5*self.half_angle, datapoints)
+            angle_x_centre-2*self.half_angle, angle_x_centre+2*self.half_angle, datapoints)
         self.angle_y_array = np.linspace(
-            angle_y_centre - 1.5*self.half_angle, angle_y_centre + 1.5*self.half_angle, datapoints)
+            angle_y_centre - 2*self.half_angle, angle_y_centre + 2*self.half_angle, datapoints)
         self.angle_x_array_deg = np.degrees(self.angle_x_array)
         self.angle_y_array_deg = np.degrees(self.angle_y_array)
         [self.angle_x_array_meshed, self.angle_y_array_meshed] = np.meshgrid(
