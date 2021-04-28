@@ -10,14 +10,10 @@ mm=10**-3
 um=10**-6
 nm=10**-9
 
-
-#TODO - how to consider spatial offset, e.g. pixels that are off centre/corner of image
-#TODO - join input and output system? seperate wavelength?
-
 #initialize system using the paramters from the prototype
 
-#DMD_parameters(pitch, fill_factor, tilt_angle)
-dmd=DMD_parameters(10.8*um,0.96,np.radians(12))
+#DMD_parameters(pitch, fill_factor, tilt_angle, no_mirrors_x,no_mirrors_y)
+dmd=DMD_parameters(10.8*um,0.96,np.radians(12), 1920,1080)
 #input_parameters(wavelength, lens_NA, angle_x_centre, angle_y_centre, focal_length)
 input=input_parameters(600*nm,0.05,np.radians(8.54),np.radians(-8.54),150*mm)
 # output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints)
@@ -71,6 +67,7 @@ for i in np.arange(np.size(wavelengths)):
      ax3.cla()
      ax4.cla()
 
+#plt.show()
 
 #import some experimental data for comparison
 

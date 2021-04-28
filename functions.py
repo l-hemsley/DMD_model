@@ -6,9 +6,8 @@ import time
 
 # Python 3.7.9
 
-###TO DO
-# sort normalization of E so that can calculate total power, and transmission as a percentage.
-# camera pixel location
+#TODO - how to consider spatial offset, e.g. pixels that are off centre/corner of image
+#TODO - join input and output system? seperate wavelength?
 
 #useful constants
 mm=10**-3
@@ -19,15 +18,17 @@ class DMD_parameters:
 
 # class for parameters related to the DMD.
 # TODO - Could include DMD mask pattern info here?
-# TODO - Also should include mask x/y dimensions but so far this is neglected in the diffraction pattern as the effect is small.
 
-    def __init__(self, pitch, fill_factor,  tilt_angle):
+    def __init__(self, pitch, fill_factor,  tilt_angle, no_mirrors_x,no_mirrors_y):
         self.pitch = pitch
         self.fill_factor = fill_factor
         self.mirror_width = pitch*fill_factor
         self.gap = pitch-self.mirror_width
         self.tilt_angle = tilt_angle
-
+        self.no_mirrors_x=no_mirrors_x
+        self.no_mirrors_y=no_mirrors_y
+        self.width=no_mirrors_x*pitch
+        self.height=no_mirrors_y*pitch
 
 class vector:
 
@@ -138,6 +139,11 @@ def gaussian2D_normalized(x, x0, y, y0, sigma):
     value = np.exp(-0.5*((x-x0)**2+(y-y0)**2)/sigma**2)/(np.pi*sigma*np.sqrt(2))
     return value
 
+def DMD_aperture_diffraction_pattern(x,x0,y,y0,DMD,input):
+    #this is practically a delta function
+    value=np.sinc(DMD.width*(x-x0)/input.wavelength)*np.sinc(DMD.height*(y-y0)/input.wavelength)
+    return value
+
 
 def grating_function(input, output, dmd):
 
@@ -150,15 +156,20 @@ def grating_function(input, output, dmd):
     data = np.zeros((output.datapoint, output.datapoint))
 
     # we assume that the effective beam size depends on the input lens NA - given by minimum beam waist of focused gaussian beam.
-    # TODO - another way to define this?
-    effective_beam_size=4*input.wavelength/(np.pi*input.lens_NA)
-    sigma = input.wavelength/(2*effective_beam_size*np.pi)
+    # TODO - SOMETHING IS WRONG HERE????????
+    # gaussian beam has E(r,z)~exp(-r^2/w(z)^2), minimum waist radius for a lens given by w0=lambda/NA*pi, about 4 micron for our prototype at 600nm, should we be using the PSF instead?
+    effective_beam_waist=input.wavelength/(np.pi*input.lens_NA)
+    #FT of beam profile E(r,z) = exp((k^2*w0^2)/4), where we approximate k as 2*pi*x/z*lambda=2*pi*sin(angle)/lambda=2*pi*angle/lambda
+    factor=2 #dodgy factor
+    sigma = input.wavelength/(np.sqrt(2)*effective_beam_waist*np.pi*factor) #for intensity profile
+    #parax approx tan(x)=sin(x)=x
 
     for angle_mx in order_angles_mx:
         for angle_my in order_angles_my:
             #place gaussian at each order location
-            data = data+gaussian2D_normalized(output.angle_x_array_meshed,
-                                              angle_mx, output.angle_y_array_meshed, angle_my, sigma)
+            data = data+gaussian2D_normalized(output.angle_x_array_meshed,angle_mx, output.angle_y_array_meshed, angle_my, sigma)# for gaussian beam and infinite DMD
+
+            #data = data + DMD_aperture_diffraction_pattern(output.angle_x_array_meshed,angle_mx, output.angle_y_array_meshed, angle_my, dmd, input)
 
     return data
 
