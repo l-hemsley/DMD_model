@@ -75,9 +75,16 @@ experimental_data=pd.read_excel(r'experimental.xlsx')
 wavelengths_experimental=experimental_data.loc[:,'Wavelength'].to_numpy()
 transmission_experimental=experimental_data.loc[:,'Transmission'].to_numpy()
 
+experimental_data = pd.read_excel(r'TL200-transmission.xlsx')
+wavelengths_lens = experimental_data.loc[:, 'Wavelength'].to_numpy()
+transmission_lens= experimental_data.loc[:, 'Transmission'].to_numpy()/100
+transmission_lens=np.interp(wavelengths/nm,wavelengths_lens,transmission_lens)
+
 plt.clf()
-plt.plot(wavelengths/nm,transmission_collected) # normalized by maximum for now
+plt.plot(wavelengths/nm,transmission_collected*transmission_lens**2)
+plt.plot(wavelengths/nm,transmission_collected)
 plt.plot(wavelengths_experimental,transmission_experimental)
+plt.grid()
 plt.ylim((0,1.2))
 plt.xlim((420,700))
 plt.xlabel('Wavelengths (nm)')

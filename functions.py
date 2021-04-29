@@ -133,61 +133,30 @@ def calculate_orders(input, output, DMD):
 
     return order_angles_mx, order_angles_my
 
-
-def gaussian2D_normalized(x, x0, y, y0, sigma):
-
-    value = np.exp(-0.5*((x-x0)**2+(y-y0)**2)/sigma**2)/(np.pi*sigma*np.sqrt(2))
-    return value
-
-def DMD_aperture_diffraction_pattern(x,x0,y,y0,DMD,input):
-    #this is practically a delta function
-    value=np.sinc(DMD.width*(x-x0)/input.wavelength)*np.sinc(DMD.height*(y-y0)/input.wavelength)
-    return value
-
-
 def grating_function(input, output, dmd):
-
-    # this function gives the diffraction pattern due to the DMD periodicity
-    # this function puts a guassian function (FT of a the assumed gaussian spot on the DMD) wherever there is an order
-    # equivalent to FT of beam convoluted with the 2D array of delta functions
-    # TODO - could include mask here? better way to do convolution?
 
     [order_angles_mx, order_angles_my] = calculate_orders(input, output, dmd)
     data = np.zeros((output.datapoint, output.datapoint))
 
-    # we assume that the effective beam size depends on the input lens NA - given by minimum beam waist of focused gaussian beam.
-    # TODO - SOMETHING IS WRONG HERE???????? should we be using the PSF instead?
-    # gaussian beam has E(r,z)~exp(-r^2/w(z)^2), minimum waist radius for a lens given by w0=lambda/NA*pi, about 4 micron for our prototype at 600nm - too small!
-    effective_beam_waist=input.wavelength/(np.pi*np.arcsin(input.lens_NA)) #diff limited
-    effective_beam_waist=15*um # approx PSF for one half of system - make as function of lambda? take from simulator
-    #FT of beam profile E(r,z) = exp((k^2*w0^2)/4), where we approximate k as 2*pi*x/z*lambda=2*pi*sin(angle)/lambda=2*pi*angle/lambda
-    factor=1 #dodgy factor
-    sigma = input.wavelength/(np.sqrt(2)*effective_beam_waist*np.pi*factor) #for intensity profile
-    #parax approx tan(x)=sin(x)=x
-
     for angle_mx in order_angles_mx:
         for angle_my in order_angles_my:
-            #place gaussian at each order location
-            #data = data+gaussian2D_normalized(output.angle_x_array_meshed,angle_mx, output.angle_y_array_meshed, angle_my, sigma)# for gaussian beam and infinite DMD
-            data=data+MTF_function(2*np.pi*np.sin(np.sqrt((output.angle_x_array_meshed-angle_mx)**2+(output.angle_y_array_meshed-angle_my)**2))/input.wavelength) # FT of PSF is MTF **2 or not doesnt make much difference
-            #data = data + DMD_aperture_diffraction_pattern(output.angle_x_array_meshed,angle_mx, output.angle_y_array_meshed, angle_my, dmd, input)
-
+            #The fourier transform of the MTF of the lens gives the point spread function (PSF) on the DMD (fopr ideal lens?)
+            #The diffraction orders are convoluted with the FT of the 'aperture'  to give the diffraction pattern
+            #Therefore the diffraction due to the spot on the DMD is the fourier transform of the PSF = the MTF, where k=2*pi*sin(angle)/wavelength
+            data=data+MTF_function(2*np.pi*np.sin(np.sqrt((output.angle_x_array_meshed-angle_mx)**2+(output.angle_y_array_meshed-angle_my)**2))/input.wavelength)
+            #not sure about whether MTF needs to be squared? As there are two lenses in the system before the DMD
+            #the influence of the DMD extent is negligible - but how to include the masks pattern?
     return data
 
 def MTF_function(spatial_frequency):
 
-    #TODO - add selection for different lenses?
+    #TODO - add selection for different lenses? As function of wavelength?
     experimental_data = pd.read_excel(r'TL200-MTF.xlsx')
     spatial_frequency_data= experimental_data.loc[:, 'Spatial Frequency'].to_numpy()
     MTF_data = experimental_data.loc[:, 'MTF'].to_numpy()
     spatial_frequency_data=spatial_frequency_data/mm
     MTF=np.interp(spatial_frequency,spatial_frequency_data,MTF_data)
 
-    # k=spatial_frequency
-    # k_max=200/mm
-    # MTF=1-k/k_max#approx triangle function
-    # ids=MTF<0
-    # MTF[ids]=0
     return MTF
 
 def calculate_diffraction_pattern_image(input, output, dmd):
@@ -199,7 +168,7 @@ def calculate_diffraction_pattern_image(input, output, dmd):
     diffraction_image = E2_grating * E2_envelope
 
     #calculate total power collected by lens
-    spatial_frequencies = np.sin(output.effective_angle_of_vector)/input.wavelength # check this
+    spatial_frequencies = np.sin(output.effective_angle_of_vector)/input.wavelength #check this
 
     #image_collected = diffraction_image * output.collected_vectors
     image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies)
