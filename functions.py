@@ -156,19 +156,20 @@ def grating_function(input, output, dmd):
     data = np.zeros((output.datapoint, output.datapoint))
 
     # we assume that the effective beam size depends on the input lens NA - given by minimum beam waist of focused gaussian beam.
-    # TODO - SOMETHING IS WRONG HERE????????
-    # gaussian beam has E(r,z)~exp(-r^2/w(z)^2), minimum waist radius for a lens given by w0=lambda/NA*pi, about 4 micron for our prototype at 600nm, should we be using the PSF instead?
-    effective_beam_waist=input.wavelength/(np.pi*input.lens_NA)
+    # TODO - SOMETHING IS WRONG HERE???????? should we be using the PSF instead?
+    # gaussian beam has E(r,z)~exp(-r^2/w(z)^2), minimum waist radius for a lens given by w0=lambda/NA*pi, about 4 micron for our prototype at 600nm - too small!
+    effective_beam_waist=input.wavelength/(np.pi*np.arcsin(input.lens_NA)) #diff limited
+    effective_beam_waist=15*um # approx PSF for one half of system - make as function of lambda? take from simulator
     #FT of beam profile E(r,z) = exp((k^2*w0^2)/4), where we approximate k as 2*pi*x/z*lambda=2*pi*sin(angle)/lambda=2*pi*angle/lambda
-    factor=2 #dodgy factor
+    factor=1 #dodgy factor
     sigma = input.wavelength/(np.sqrt(2)*effective_beam_waist*np.pi*factor) #for intensity profile
     #parax approx tan(x)=sin(x)=x
 
     for angle_mx in order_angles_mx:
         for angle_my in order_angles_my:
             #place gaussian at each order location
-            data = data+gaussian2D_normalized(output.angle_x_array_meshed,angle_mx, output.angle_y_array_meshed, angle_my, sigma)# for gaussian beam and infinite DMD
-
+            #data = data+gaussian2D_normalized(output.angle_x_array_meshed,angle_mx, output.angle_y_array_meshed, angle_my, sigma)# for gaussian beam and infinite DMD
+            data=data+MTF_function(2*np.pi*np.sin(np.sqrt((output.angle_x_array_meshed-angle_mx)**2+(output.angle_y_array_meshed-angle_my)**2))/input.wavelength) # FT of PSF is MTF **2 or not doesnt make much difference
             #data = data + DMD_aperture_diffraction_pattern(output.angle_x_array_meshed,angle_mx, output.angle_y_array_meshed, angle_my, dmd, input)
 
     return data
