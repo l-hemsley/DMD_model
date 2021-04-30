@@ -7,7 +7,7 @@ import time
 # Python 3.7.9
 
 #TODO - how to consider spatial offset, e.g. pixels that are off centre/corner of image
-#TODO - join input and output system? seperate wavelength?
+#TODO - MTF for different lenses
 
 #useful constants
 mm=10**-3
@@ -19,16 +19,12 @@ class DMD_parameters:
 # class for parameters related to the DMD.
 # TODO - Could include DMD mask pattern info here?
 
-    def __init__(self, pitch, fill_factor,  tilt_angle, no_mirrors_x,no_mirrors_y):
+    def __init__(self, pitch, fill_factor,  tilt_angle):
         self.pitch = pitch
         self.fill_factor = fill_factor
         self.mirror_width = pitch*fill_factor
         self.gap = pitch-self.mirror_width
         self.tilt_angle = tilt_angle
-        self.no_mirrors_x=no_mirrors_x
-        self.no_mirrors_y=no_mirrors_y
-        self.width=no_mirrors_x*pitch
-        self.height=no_mirrors_y*pitch
 
 class vector:
 
@@ -41,58 +37,46 @@ class vector:
         self.y = self.z * np.tan(angle_y)
 
 class input_parameters:
-
-# class related to so-called 'input parameters' of the system before the DMD, for example, the focusing lens parameters and wavelength.
-# TODO - What if there is no input lens?
-
-    def __init__(self, wavelength, lens_NA, angle_x_centre, angle_y_centre, focal_length):
+    #class related to the input parameters on the DMD
+    def __init__(self, wavelength, axis_angle_x, axis_angle_y):
         self.wavelength = wavelength
-        self.lens_NA = lens_NA
-        self.focal_length=focal_length
-        self.half_angle = np.arcsin(lens_NA)
-        self.angle_x_centre = angle_x_centre
-        self.angle_y_centre = angle_y_centre
-        self.beam_vector = vector(self.angle_x_centre, self.angle_y_centre, 1)
+        self.axis_angle_x = axis_angle_x #angle of optical axis to DMD perpendicular direction, =0 if normal incidence
+        self.axis_angle_y= axis_angle_y
+        self.beam_vector = vector(self.axis_angle_x, self.axis_angle_y, 1)
 
 
 class output_parameters:
 
 # class related to the 'output parameters' of the system after the DMD, for example the collection lens.
-# This is useful for working out which bit of the diffraction pattern is relevant
-# gives the 2D array of discretized angles used to build the diffraction pattern image
+# gives the 2D array of angles used to build the diffraction pattern image
 
+    def __init__(self, lens_NA, axis_angle_x, axis_angle_y, datapoints):
 
-    def __init__(self, lens_NA, angle_x_centre, angle_y_centre, datapoints):
-        self.lens_NA = lens_NA
-        self.half_angle = np.arcsin(lens_NA)
-        self.angle_x_centre = angle_x_centre
-        self.angle_y_centre = angle_y_centre
-        self.datapoint = datapoints
-        #array of output angles to display for diffraction image (2* NA of lens)
+        # array of output angles to display for diffraction image (2* NA of lens should be enough)
+        self.half_angle = 2*np.arcsin(lens_NA)
+        self.axis_angle_x = axis_angle_x  # angle of optical axis to DMD perpendicular direction, =0 if normal incidence
+        self.axis_angle_y = axis_angle_y
+        self.datapoint = datapoints #number of datapoints to use in diffraction image
         self.angle_x_array = np.linspace(
-            angle_x_centre-2*self.half_angle, angle_x_centre+2*self.half_angle, datapoints)
+            axis_angle_x -  self.half_angle, axis_angle_x +  self.half_angle, datapoints)
         self.angle_y_array = np.linspace(
-            angle_y_centre - 2*self.half_angle, angle_y_centre + 2*self.half_angle, datapoints)
-        self.angle_x_array_deg = np.degrees(self.angle_x_array)
-        self.angle_y_array_deg = np.degrees(self.angle_y_array)
+            axis_angle_y -  self.half_angle, axis_angle_y + self.half_angle, datapoints)
         [self.angle_x_array_meshed, self.angle_y_array_meshed] = np.meshgrid(
             self.angle_x_array, self.angle_y_array)
         self.beam_vector = vector(self.angle_x_array_meshed,
                              self.angle_y_array_meshed, -1)
-
-        # params below for finding which angles are within the NA of the lens
         self.effective_angle_of_vector = np.sqrt(
-            (self.angle_x_array_meshed-angle_x_centre)**2+(self.angle_y_array_meshed-self.angle_y_centre)**2)
+            (self.angle_x_array_meshed - axis_angle_x) ** 2 + (self.angle_y_array_meshed - axis_angle_y ) ** 2) #angle compared to optical axis
 
-def envelope_function(input, output, dmd):
+def envelope_function(input, output, DMD):
 
     # this calculated the diffraction pattern for the tilted mirror, which is used as the envelope function for the entire diffraction pattern
     #Calculated using equation given in; 'Simulating digital micromirror devices for patterning coherent excitation light in structured illumination microscopy'
     #link = https://www.biorxiv.org/content/10.1101/2020.10.02.323527v1.supplementary-material
 
-    w = dmd.mirror_width
-    c = np.cos(dmd.tilt_angle)
-    s = np.sin(dmd.tilt_angle)
+    w = DMD.mirror_width
+    c = np.cos(DMD.tilt_angle)
+    s = np.sin(DMD.tilt_angle)
     a = input.beam_vector
     b = output.beam_vector
     diff = [a.x-b.x, a.y-b.y, a.z-b.z]
@@ -113,8 +97,8 @@ def calculate_orders(input, output, DMD):
     #keeps only the orders which fall within the 'half angle' defined by the collection lens
 
     # for x
-    alpha_x = input.angle_x_centre
-    beta_x = output.angle_x_centre
+    alpha_x = input.axis_angle_x
+    beta_x = output.axis_angle_x
     half_angle = output.half_angle
     order_mx_max = np.ceil(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x+half_angle))/input.wavelength)
     order_mx_min = np.floor(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x-half_angle))/input.wavelength)
@@ -123,8 +107,8 @@ def calculate_orders(input, output, DMD):
         order_array_mx*input.wavelength/DMD.pitch-np.sin(alpha_x))
 
     #for y
-    alpha_y = input.angle_y_centre
-    beta_y = output.angle_y_centre
+    alpha_y = input.axis_angle_y
+    beta_y = output.axis_angle_y
     order_my_max = np.ceil(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y + half_angle)) / input.wavelength)
     order_my_min = np.floor(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y - half_angle)) / input.wavelength)
     order_array_my = np.arange(order_my_min-1, order_my_max+1, 1)
@@ -132,21 +116,6 @@ def calculate_orders(input, output, DMD):
         order_array_my * input.wavelength / DMD.pitch - np.sin(alpha_y))
 
     return order_angles_mx, order_angles_my
-
-def grating_function(input, output, dmd):
-
-    [order_angles_mx, order_angles_my] = calculate_orders(input, output, dmd)
-    data = np.zeros((output.datapoint, output.datapoint))
-
-    for angle_mx in order_angles_mx:
-        for angle_my in order_angles_my:
-            #The fourier transform of the MTF of the lens gives the point spread function (PSF) on the DMD (fopr ideal lens?)
-            #The diffraction orders are convoluted with the FT of the 'aperture'  to give the diffraction pattern
-            #Therefore the diffraction due to the spot on the DMD is the fourier transform of the PSF = the MTF, where k=2*pi*sin(angle)/wavelength
-            data=data+MTF_function(2*np.pi*np.sin(np.sqrt((output.angle_x_array_meshed-angle_mx)**2+(output.angle_y_array_meshed-angle_my)**2))/input.wavelength)
-            #not sure about whether MTF needs to be squared? As there are two lenses in the system before the DMD
-            #the influence of the DMD extent is negligible - but how to include the masks pattern?
-    return data
 
 def MTF_function(spatial_frequency):
 
@@ -159,18 +128,34 @@ def MTF_function(spatial_frequency):
 
     return MTF
 
-def calculate_diffraction_pattern_image(input, output, dmd):
+def grating_function(input, output, DMD):
+
+    #gives diffraction order convoluted by FT of aperture function (or PSF on DMD)
+
+    [order_angles_mx, order_angles_my] = calculate_orders(input, output, DMD)
+    data = np.zeros((output.datapoint, output.datapoint))
+
+    for angle_mx in order_angles_mx:
+        for angle_my in order_angles_my:
+            #The fourier transform of the MTF of the lens gives the point spread function (PSF) on the DMD (fopr ideal lens?)
+            #The diffraction orders are convoluted with the FT of the 'aperture'  to give the diffraction pattern
+            #Therefore the diffraction due to the spot on the DMD is the fourier transform of the PSF = the MTF, where k=2*pi*sin(angle)/wavelength
+            k=2*np.pi*np.sin(np.sqrt((output.angle_x_array_meshed-angle_mx)**2+(output.angle_y_array_meshed-angle_my)**2))/input.wavelength
+            data=data+MTF_function(k)**2
+            #not sure about whether MTF needs to be squared? As there are two lenses in the system before the DMD
+            #the influence of the DMD extent is negligible - but how to include the masks pattern?
+    return data
+
+def calculate_diffraction_pattern_image(input, output, DMD):
 
     #gives the diffraction pattern in intensity
 
-    E2_grating = grating_function(input, output, dmd) ** 2
-    E2_envelope = envelope_function(input, output, dmd) **2
+    E2_grating = grating_function(input, output, DMD) ** 2
+    E2_envelope = envelope_function(input, output, DMD) **2
     diffraction_image = E2_grating * E2_envelope
 
     #calculate total power collected by lens
     spatial_frequencies = np.sin(output.effective_angle_of_vector)/input.wavelength #check this
-
-    #image_collected = diffraction_image * output.collected_vectors
     image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies)
     total_power_collected_MTF= np.sum(np.sum(image_collected_MTF))
 

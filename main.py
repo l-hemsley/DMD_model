@@ -12,12 +12,12 @@ nm=10**-9
 
 #initialize system using the paramters from the prototype
 
-#DMD_parameters(pitch, fill_factor, tilt_angle, no_mirrors_x,no_mirrors_y)
-dmd=DMD_parameters(10.8*um,0.96,np.radians(12), 1920,1080)
-#input_parameters(wavelength, lens_NA, angle_x_centre, angle_y_centre, focal_length)
-input=input_parameters(600*nm,0.05,np.radians(8.54),np.radians(-8.54),150*mm)
+#DMD_parameters(pitch, fill_factor, tilt_angle)
+DMD=DMD_parameters(10.8*um,0.98,np.radians(12))
+#input_parameters(wavelength, angle_x_centre, angle_y_centre)
+input=input_parameters(600*nm,np.radians(8.54),np.radians(-8.54))
 # output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints)
-output=output_parameters(0.05,np.radians(8.54),np.radians(-8.54),100)
+output=output_parameters(0.05,np.radians(8.54),np.radians(-8.54),200)
 
 #wavelength range of interest
 wavelengths=np.arange(420*nm,700*nm,5*nm)
@@ -26,12 +26,16 @@ fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
 
 #The model is run over the wavelength range, producing a diffraction pattern for each wavelength
 for i in np.arange(np.size(wavelengths)):
+     ax1.cla()
+     ax2.cla()
+     ax3.cla()
+     ax4.cla()
 
      t = time.time()
      input.wavelength=wavelengths[i]
 
      #calculation diffraction image
-     [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected]=calculate_diffraction_pattern_image(input, output, dmd)
+     [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected]=calculate_diffraction_pattern_image(input, output, DMD)
 
      elapsed = time.time() - t
      print('calculation time elapsed = '+str(elapsed))
@@ -57,17 +61,13 @@ for i in np.arange(np.size(wavelengths)):
      fig.tight_layout()
 
      fig.suptitle('Wavelength =' +str(np.round(input.wavelength/nm,0))+'nm', fontsize=16)
-     #fig.savefig('Figures/wavelength' +str(np.round(input.wavelength/nm,0))+'nm' + '.png')
+     fig.savefig('Figures/wavelength' +str(np.round(input.wavelength/nm,0))+'nm' + '.png')
 
      plt.pause(0.000001)
      elapsed = time.time() - t
      print('plotting time elapsed = '+str(elapsed))
-     ax1.cla()
-     ax2.cla()
-     ax3.cla()
-     ax4.cla()
 
-#plt.show()
+plt.show()
 
 #import some experimental data for comparison
 
@@ -80,7 +80,7 @@ wavelengths_lens = experimental_data.loc[:, 'Wavelength'].to_numpy()
 transmission_lens= experimental_data.loc[:, 'Transmission'].to_numpy()/100
 transmission_lens=np.interp(wavelengths/nm,wavelengths_lens,transmission_lens)
 
-plt.clf()
+fig=plt.figure(2)
 plt.plot(wavelengths/nm,transmission_collected*transmission_lens**2)
 plt.plot(wavelengths/nm,transmission_collected)
 plt.plot(wavelengths_experimental,transmission_experimental)
