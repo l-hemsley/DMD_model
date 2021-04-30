@@ -67,7 +67,6 @@ for i in np.arange(np.size(wavelengths)):
      elapsed = time.time() - t
      print('plotting time elapsed = '+str(elapsed))
 
-plt.show()
 
 #import some experimental data for comparison
 
