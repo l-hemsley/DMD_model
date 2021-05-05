@@ -12,16 +12,24 @@ nm=10**-9
 
 #initialize system using the paramters from the prototype
 
-#DMD_parameters(pitch, fill_factor, tilt_angle)
-DMD=DMD_parameters(10.8*um,0.98,np.radians(12))
+#DMD_parameters(pitch, fill_factor, tilt_angle, mirror axis tilt direction)
+DMD=DMD_parameters(10.8*um,0.98,np.radians(12),'diagonal')
 #input_parameters(wavelength, angle_x_centre, angle_y_centre)
-input=input_parameters(600*nm,np.radians(8.54),np.radians(-8.54))
+a=8.54
+input=input_parameters(600*nm,np.radians(a),np.radians(-a))
 # output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints)
-output=output_parameters(0.05,np.radians(8.54),np.radians(-8.54),200)
+output=output_parameters(0.01,np.radians(a),np.radians(-a),200,DMD,input)
+
+ #DMD_parameters(pitch, fill_factor, tilt_angle)
+DMD=DMD_parameters(5.4*um,0.98,np.radians(17),'vertical')
+input=input_parameters(600*nm,np.radians(0),np.radians(0))
+output=output_parameters(0.05,np.radians(34),np.radians(0),400,DMD,input)
 
 #wavelength range of interest
 wavelengths=np.arange(420*nm,700*nm,5*nm)
+#wavelengths=[732*nm]
 transmission_collected=np.zeros((np.size(wavelengths)))
+image_collected=np.zeros([output.angle_x_array_meshed.shape[0],output.angle_x_array_meshed.shape[1]])
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
 
 #The model is run over the wavelength range, producing a diffraction pattern for each wavelength
@@ -36,7 +44,7 @@ for i in np.arange(np.size(wavelengths)):
 
      #calculation diffraction image
      [diffraction_image,total_power_collected,E2_grating,E2_envelope,image_collected]=calculate_diffraction_pattern_image(input, output, DMD)
-
+     #image_collected=image_collected+image_collected2*wavelengths[i]
      elapsed = time.time() - t
      print('calculation time elapsed = '+str(elapsed))
      t = time.time()
@@ -67,7 +75,7 @@ for i in np.arange(np.size(wavelengths)):
      elapsed = time.time() - t
      print('plotting time elapsed = '+str(elapsed))
 
-
+#plt.show()
 #import some experimental data for comparison
 
 experimental_data=pd.read_excel(r'experimental.xlsx')
@@ -82,7 +90,7 @@ transmission_lens=np.interp(wavelengths/nm,wavelengths_lens,transmission_lens)
 fig=plt.figure(2)
 plt.plot(wavelengths/nm,transmission_collected*transmission_lens**2)
 plt.plot(wavelengths/nm,transmission_collected)
-plt.plot(wavelengths_experimental,transmission_experimental)
+#plt.plot(wavelengths_experimental,transmission_experimental)
 plt.grid()
 plt.ylim((0,1.2))
 plt.xlim((420,700))
@@ -90,4 +98,4 @@ plt.xlabel('Wavelengths (nm)')
 plt.ylabel('Transmission')
 fig.savefig('Figures/Transmission.png')
 plt.show()
-
+#

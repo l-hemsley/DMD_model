@@ -19,12 +19,13 @@ class DMD_parameters:
 # class for parameters related to the DMD.
 # TODO - Could include DMD mask pattern info here?
 
-    def __init__(self, pitch, fill_factor,  tilt_angle):
+    def __init__(self, pitch, fill_factor,  tilt_angle, mirror_axis_angle):
         self.pitch = pitch
         self.fill_factor = fill_factor
         self.mirror_width = pitch*fill_factor
         self.gap = pitch-self.mirror_width
         self.tilt_angle = tilt_angle
+        self.mirror_axis_angle=mirror_axis_angle
 
 class vector:
 
@@ -32,7 +33,7 @@ class vector:
 
     def __init__(self, angle_x, angle_y, direction):
         self.z = direction * 1 / \
-                 np.sqrt(1 - np.tan(angle_x) ** 2 - np.tan(angle_y) ** 2)
+                 np.sqrt(1+np.tan(angle_x) ** 2 + np.tan(angle_y) ** 2)
         self.x = self.z * np.tan(angle_x)
         self.y = self.z * np.tan(angle_y)
 
@@ -50,10 +51,9 @@ class output_parameters:
 # class related to the 'output parameters' of the system after the DMD, for example the collection lens.
 # gives the 2D array of angles used to build the diffraction pattern image
 
-    def __init__(self, lens_NA, axis_angle_x, axis_angle_y, datapoints):
+    def __init__(self, lens_NA, axis_angle_x, axis_angle_y, datapoints,DMD,input):
 
-        # array of output angles to display for diffraction image (2* NA of lens should be enough)
-        self.half_angle = 2*np.arcsin(lens_NA)
+        self.half_angle = input.wavelength/DMD.mirror_width # double approx the first minimum of the diffraction envelope due to the mirror
         self.axis_angle_x = axis_angle_x  # angle of optical axis to DMD perpendicular direction, =0 if normal incidence
         self.axis_angle_y = axis_angle_y
         self.datapoint = datapoints #number of datapoints to use in diffraction image
@@ -81,14 +81,33 @@ def envelope_function(input, output, DMD):
     b = output.beam_vector
     diff = [a.x-b.x, a.y-b.y, a.z-b.z]
 
-    f1 = diff[0]*0.5*(1+c)+diff[1]*0.5*(1-c)+diff[2]*(-s/np.sqrt(2))
-    f2 = diff[0] * 0.5 * (1 - c) + diff[1] * 0.5 * (1 + c) + diff[2] * ( s / np.sqrt(2))
+    n=R_matrix(DMD)
+    nx=n[0]
+    ny=n[1]
+
+    f1 = diff[0]*(nx**2*(1-c)+c)+diff[1]*nx*ny*(1-c)-diff[2]*ny*s
+    f2 = diff[0] *nx*ny* (1 - c) + diff[1] *(ny**2 * (1 - c) +c)+ diff[2] *nx* s
+
+    #f1 = diff[0]*0.5*(1+c)+diff[1]*0.5*(1-c)+diff[2]*(-s/np.sqrt(2))
+    #f2 = diff[0] * 0.5 * (1 - c) + diff[1] * 0.5 * (1 + c) + diff[2] * ( s / np.sqrt(2))
 
     A = np.pi*f1*w/input.wavelength
     B = np.pi * f2*w/ input.wavelength
     data =w**2*np.sin(A)*np.sin(B)/(A*B)
 
     return data
+
+def R_matrix(DMD):
+
+    if DMD.mirror_axis_angle =='diagonal':
+        n=[1,1]/np.sqrt(2)
+    elif DMD.mirror_axis_angle =='vertical':
+        n = [0, 1]
+    elif DMD.mirror_axis_angle == 'horizontal' \
+                                  '':
+        n = [1, 0]
+
+    return n
 
 
 def calculate_orders(input, output, DMD):
@@ -102,7 +121,7 @@ def calculate_orders(input, output, DMD):
     half_angle = output.half_angle
     order_mx_max = np.ceil(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x+half_angle))/input.wavelength)
     order_mx_min = np.floor(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x-half_angle))/input.wavelength)
-    order_array_mx = np.arange(order_mx_min-1, order_mx_max+1, 1)
+    order_array_mx = np.arange(order_mx_min, order_mx_max, 1)
     order_angles_mx = np.arcsin(
         order_array_mx*input.wavelength/DMD.pitch-np.sin(alpha_x))
 
@@ -111,9 +130,11 @@ def calculate_orders(input, output, DMD):
     beta_y = output.axis_angle_y
     order_my_max = np.ceil(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y + half_angle)) / input.wavelength)
     order_my_min = np.floor(DMD.pitch * (np.sin(alpha_y) + np.sin(beta_y - half_angle)) / input.wavelength)
-    order_array_my = np.arange(order_my_min-1, order_my_max+1, 1)
+    order_array_my = np.arange(order_my_min, order_my_max, 1)
     order_angles_my = np.arcsin(
         order_array_my * input.wavelength / DMD.pitch - np.sin(alpha_y))
+
+    #print(order_array_mx, order_array_my)
 
     return order_angles_mx, order_angles_my
 
@@ -152,7 +173,7 @@ def calculate_diffraction_pattern_image(input, output, DMD):
 
     E2_grating = grating_function(input, output, DMD) ** 2
     E2_envelope = envelope_function(input, output, DMD) **2
-    diffraction_image = E2_grating * E2_envelope
+    diffraction_image = E2_grating  * E2_envelope
 
     #calculate total power collected by lens
     spatial_frequencies = np.sin(output.effective_angle_of_vector)/input.wavelength #check this
