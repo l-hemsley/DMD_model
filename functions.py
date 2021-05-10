@@ -39,11 +39,12 @@ class vector:
 
 class input_parameters:
     #class related to the input parameters on the DMD
-    def __init__(self, wavelength, axis_angle_x, axis_angle_y):
+    def __init__(self, wavelength, axis_angle_x, axis_angle_y,lens):
         self.wavelength = wavelength
         self.axis_angle_x = axis_angle_x #angle of optical axis to DMD perpendicular direction, =0 if normal incidence
         self.axis_angle_y= axis_angle_y
         self.beam_vector = vector(self.axis_angle_x, self.axis_angle_y, 1)
+        self.lens=lens
 
 
 class output_parameters:
@@ -51,7 +52,7 @@ class output_parameters:
 # class related to the 'output parameters' of the system after the DMD, for example the collection lens.
 # gives the 2D array of angles used to build the diffraction pattern image
 
-    def __init__(self, lens_NA, axis_angle_x, axis_angle_y, datapoints,DMD,input):
+    def __init__(self, lens_NA, axis_angle_x, axis_angle_y, datapoints,DMD,input,lens):
 
         self.half_angle = input.wavelength/DMD.mirror_width # double approx the first minimum of the diffraction envelope due to the mirror
         self.axis_angle_x = axis_angle_x  # angle of optical axis to DMD perpendicular direction, =0 if normal incidence
@@ -67,6 +68,7 @@ class output_parameters:
                              self.angle_y_array_meshed, -1)
         self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed - axis_angle_x) ** 2 + (self.angle_y_array_meshed - axis_angle_y ) ** 2) #angle compared to optical axis
+        self.lens = lens
 
 def envelope_function(input, output, DMD):
 
@@ -138,10 +140,13 @@ def calculate_orders(input, output, DMD):
 
     return order_angles_mx, order_angles_my
 
-def MTF_function(spatial_frequency):
+def MTF_function(spatial_frequency,lens):
 
-    #TODO - add selection for different lenses? As function of wavelength?
-    experimental_data = pd.read_excel(r'TL200-MTF.xlsx')
+    if lens=='TL200':
+        experimental_data = pd.read_excel(r'TL200-MTF.xlsx')
+    elif lens=='TL165':
+        experimental_data = pd.read_excel(r'TL165-MTF.xlsx')
+
     spatial_frequency_data= experimental_data.loc[:, 'Spatial Frequency'].to_numpy()
     MTF_data = experimental_data.loc[:, 'MTF'].to_numpy()
     spatial_frequency_data=spatial_frequency_data/mm
@@ -162,7 +167,7 @@ def grating_function(input, output, DMD):
             #The diffraction orders are convoluted with the FT of the 'aperture'  to give the diffraction pattern
             #Therefore the diffraction due to the spot on the DMD is the fourier transform of the PSF = the MTF, where k=2*pi*sin(angle)/wavelength
             k=2*np.pi*np.sin(np.sqrt((output.angle_x_array_meshed-angle_mx)**2+(output.angle_y_array_meshed-angle_my)**2))/input.wavelength
-            data=data+MTF_function(k)**2
+            data=data+MTF_function(k,input.lens)**2
             #not sure about whether MTF needs to be squared? As there are two lenses in the system before the DMD
             #the influence of the DMD extent is negligible - but how to include the masks pattern?
     return data
@@ -177,7 +182,7 @@ def calculate_diffraction_pattern_image(input, output, DMD):
 
     #calculate total power collected by lens
     spatial_frequencies = np.sin(output.effective_angle_of_vector)/input.wavelength #check this
-    image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies)
+    image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies,output.lens)
     total_power_collected_MTF= np.sum(np.sum(image_collected_MTF))
 
     return [diffraction_image,total_power_collected_MTF,E2_grating,E2_envelope,image_collected_MTF]

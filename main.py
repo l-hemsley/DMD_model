@@ -16,17 +16,17 @@ nm=10**-9
 DMD=DMD_parameters(10.8*um,0.98,np.radians(12),'diagonal')
 #input_parameters(wavelength, angle_x_centre, angle_y_centre)
 a=8.54
-input=input_parameters(600*nm,np.radians(a),np.radians(-a))
-# output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints)
-output=output_parameters(0.01,np.radians(a),np.radians(-a),200,DMD,input)
+input=input_parameters(600*nm,np.radians(a),np.radians(-a),'TL200')
+# output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints, DMD, input)
+output=output_parameters(0.05,np.radians(a),np.radians(-a),400,DMD,input,'TL200')
 
- #DMD_parameters(pitch, fill_factor, tilt_angle)
-DMD=DMD_parameters(5.4*um,0.98,np.radians(17),'vertical')
-input=input_parameters(600*nm,np.radians(0),np.radians(0))
-output=output_parameters(0.05,np.radians(34),np.radians(0),400,DMD,input)
+ #ANTOINES SYSTEM
+# DMD=DMD_parameters(5.4*um,0.98,np.radians(17),'vertical')
+# input=input_parameters(600*nm,np.radians(0),np.radians(0),'TL165')
+# output=output_parameters(0.05,np.radians(34),np.radians(0),400,DMD,input,'TL165')
 
 #wavelength range of interest
-wavelengths=np.arange(420*nm,700*nm,5*nm)
+wavelengths=np.arange(420*nm,700*nm,2*nm)
 #wavelengths=[732*nm]
 transmission_collected=np.zeros((np.size(wavelengths)))
 image_collected=np.zeros([output.angle_x_array_meshed.shape[0],output.angle_x_array_meshed.shape[1]])
@@ -90,7 +90,7 @@ transmission_lens=np.interp(wavelengths/nm,wavelengths_lens,transmission_lens)
 fig=plt.figure(2)
 plt.plot(wavelengths/nm,transmission_collected*transmission_lens**2)
 plt.plot(wavelengths/nm,transmission_collected)
-#plt.plot(wavelengths_experimental,transmission_experimental)
+plt.plot(wavelengths_experimental,transmission_experimental)
 plt.grid()
 plt.ylim((0,1.2))
 plt.xlim((420,700))
