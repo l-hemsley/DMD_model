@@ -160,7 +160,7 @@ def grating_function(input, output, dmd):
     # gaussian beam has E(r,z)~exp(-r^2/w(z)^2), minimum waist radius for a lens given by w0=lambda/NA*pi, about 4 micron for our prototype at 600nm, should we be using the PSF instead?
     effective_beam_waist=input.wavelength/(np.pi*input.lens_NA)
     #FT of beam profile E(r,z) = exp((k^2*w0^2)/4), where we approximate k as 2*pi*x/z*lambda=2*pi*sin(angle)/lambda=2*pi*angle/lambda
-    factor=2 #dodgy factor
+    factor=5 #dodgy factor 5 ok
     sigma = input.wavelength/(np.sqrt(2)*effective_beam_waist*np.pi*factor) #for intensity profile
     #parax approx tan(x)=sin(x)=x
 
