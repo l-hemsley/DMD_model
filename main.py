@@ -16,9 +16,9 @@ nm=10**-9
 DMD=DMD_parameters(10.8*um,0.98,np.radians(12),'diagonal')
 #input_parameters(wavelength, angle_x_centre, angle_y_centre)
 a=8.54
-input=input_parameters(600*nm,np.radians(a),np.radians(-a),'TL200')
+input=input_parameters(600*nm,np.radians(a),np.radians(-a),'ideal',0.05*2*150*mm,150*mm)
 # output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints, DMD, input)
-output=output_parameters(0.05,np.radians(a),np.radians(-a),400,DMD,input,'TL200')
+output=output_parameters(np.radians(a),np.radians(-a),200,DMD,input)
 
  #ANTOINES SYSTEM
 # DMD=DMD_parameters(5.4*um,0.98,np.radians(17),'vertical')

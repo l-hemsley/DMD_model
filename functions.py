@@ -39,20 +39,21 @@ class vector:
 
 class input_parameters:
     #class related to the input parameters on the DMD
-    def __init__(self, wavelength, axis_angle_x, axis_angle_y,lens):
+    def __init__(self, wavelength, axis_angle_x, axis_angle_y,lens,lens_diameter,focal_length):
         self.wavelength = wavelength
         self.axis_angle_x = axis_angle_x #angle of optical axis to DMD perpendicular direction, =0 if normal incidence
         self.axis_angle_y= axis_angle_y
         self.beam_vector = vector(self.axis_angle_x, self.axis_angle_y, 1)
         self.lens=lens
-
+        self.lens_diameter=lens_diameter
+        self.focal_length=focal_length
 
 class output_parameters:
 
 # class related to the 'output parameters' of the system after the DMD, for example the collection lens.
 # gives the 2D array of angles used to build the diffraction pattern image
 
-    def __init__(self, lens_NA, axis_angle_x, axis_angle_y, datapoints,DMD,input,lens):
+    def __init__(self, axis_angle_x, axis_angle_y, datapoints,DMD,input):
 
         self.half_angle = input.wavelength/DMD.mirror_width # double approx the first minimum of the diffraction envelope due to the mirror
         self.axis_angle_x = axis_angle_x  # angle of optical axis to DMD perpendicular direction, =0 if normal incidence
@@ -68,7 +69,6 @@ class output_parameters:
                              self.angle_y_array_meshed, -1)
         self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed - axis_angle_x) ** 2 + (self.angle_y_array_meshed - axis_angle_y ) ** 2) #angle compared to optical axis
-        self.lens = lens
 
 def envelope_function(input, output, DMD):
 
@@ -140,17 +140,23 @@ def calculate_orders(input, output, DMD):
 
     return order_angles_mx, order_angles_my
 
-def MTF_function(spatial_frequency,lens):
+def MTF_function(spatial_frequency,input):
 
-    if lens=='TL200':
-        experimental_data = pd.read_excel(r'TL200-MTF.xlsx')
-    elif lens=='TL165':
-        experimental_data = pd.read_excel(r'TL165-MTF.xlsx')
-
-    spatial_frequency_data= experimental_data.loc[:, 'Spatial Frequency'].to_numpy()
-    MTF_data = experimental_data.loc[:, 'MTF'].to_numpy()
-    spatial_frequency_data=spatial_frequency_data/mm
-    MTF=np.interp(spatial_frequency,spatial_frequency_data,MTF_data)
+    lens=input.lens
+    f=spatial_frequency
+    MTF=[]
+    if lens == 'ideal':
+        f0=(input.lens_diameter/(input.wavelength*input.focal_length))
+        MTF=((2/np.pi)*(np.arccos(f/f0)-(f/f0)*np.sqrt(1-(f/f0)**2)))
+        zerovals=f>f0
+        MTF[zerovals]=0
+    else:
+        file=lens+'-MTF.xlsx'
+        experimental_data = pd.read_excel(file)
+        spatial_frequency_data= experimental_data.loc[:, 'Spatial Frequency'].to_numpy()
+        MTF_data = experimental_data.loc[:, 'MTF'].to_numpy()
+        spatial_frequency_data=spatial_frequency_data/mm
+        MTF=np.interp(f,spatial_frequency_data,MTF_data)
 
     return MTF
 
@@ -161,25 +167,13 @@ def grating_function(input, output, DMD):
     [order_angles_mx, order_angles_my] = calculate_orders(input, output, DMD)
     data = np.zeros((output.datapoint, output.datapoint))
 
-<<<<<<< HEAD
-    # we assume that the effective beam size depends on the input lens NA - given by minimum beam waist of focused gaussian beam.
-    # TODO - SOMETHING IS WRONG HERE????????
-    # gaussian beam has E(r,z)~exp(-r^2/w(z)^2), minimum waist radius for a lens given by w0=lambda/NA*pi, about 4 micron for our prototype at 600nm, should we be using the PSF instead?
-    effective_beam_waist=input.wavelength/(np.pi*input.lens_NA)
-    #FT of beam profile E(r,z) = exp((k^2*w0^2)/4), where we approximate k as 2*pi*x/z*lambda=2*pi*sin(angle)/lambda=2*pi*angle/lambda
-    factor=5 #dodgy factor 5 ok
-    sigma = input.wavelength/(np.sqrt(2)*effective_beam_waist*np.pi*factor) #for intensity profile
-    #parax approx tan(x)=sin(x)=x
-
-=======
->>>>>>> 7b74882faea39b9f94325576d368de767852cd51
     for angle_mx in order_angles_mx:
         for angle_my in order_angles_my:
             #The fourier transform of the MTF of the lens gives the point spread function (PSF) on the DMD (fopr ideal lens?)
             #The diffraction orders are convoluted with the FT of the 'aperture'  to give the diffraction pattern
             #Therefore the diffraction due to the spot on the DMD is the fourier transform of the PSF = the MTF, where k=2*pi*sin(angle)/wavelength
             k=2*np.pi*np.sin(np.sqrt((output.angle_x_array_meshed-angle_mx)**2+(output.angle_y_array_meshed-angle_my)**2))/input.wavelength
-            data=data+MTF_function(k,input.lens)**2
+            data=data+MTF_function(k,input)**2
             #not sure about whether MTF needs to be squared? As there are two lenses in the system before the DMD
             #the influence of the DMD extent is negligible - but how to include the masks pattern?
     return data
@@ -194,7 +188,7 @@ def calculate_diffraction_pattern_image(input, output, DMD):
 
     #calculate total power collected by lens
     spatial_frequencies = np.sin(output.effective_angle_of_vector)/input.wavelength #check this
-    image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies,output.lens)
+    image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies,input)
     total_power_collected_MTF= np.sum(np.sum(image_collected_MTF))
 
     return [diffraction_image,total_power_collected_MTF,E2_grating,E2_envelope,image_collected_MTF]
