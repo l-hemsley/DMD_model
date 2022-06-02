@@ -13,20 +13,16 @@ nm=10**-9
 #initialize system using the paramters from the prototype
 
 #DMD_parameters(pitch, fill_factor, tilt_angle, mirror axis tilt direction)
-DMD=DMD_parameters(10.8*um,0.98,np.radians(12),'diagonal')
+DMD=DMD_parameters(7.6*um,0.98,np.radians(12),'diagonal')
+#input_parameters(wavelength, angle_x_centre, angle_y_centre)
 a=8.54
-#(wavelength, axis_angle_x, axis_angle_y,lens,lens_diameter,focal_length):
-input=input_parameters(600*nm,np.radians(a),np.radians(-a),'TL200',0.05*2*150*mm,150*mm)
+input=input_parameters(700*nm,0,np.radians(-a),'ideal',22*mm,50*mm)
 # output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints, DMD, input)
-output=output_parameters(np.radians(a),np.radians(-a),200,DMD,'TL200',0.05*2*150*mm,150*mm,input)
+output=output_parameters(np.radians(2*a),np.radians(-a),200,DMD,'ideal',44*mm,100*mm,input)
 
- #ANTOINES SYSTEM - out of date
-# DMD=DMD_parameters(5.4*um,0.98,np.radians(17),'vertical')
-# input=input_parameters(600*nm,np.radians(0),np.radians(0),'TL165')
-# output=output_parameters(0.05,np.radians(34),np.radians(0),400,DMD,input,'TL165')
 
 #wavelength range of interest
-wavelengths=np.arange(420*nm,700*nm,20*nm)
+wavelengths=np.arange(700*nm,850*nm,10*nm)
 #wavelengths=[732*nm]
 transmission_collected=np.zeros((np.size(wavelengths)))
 image_collected=np.zeros([output.angle_x_array_meshed.shape[0],output.angle_x_array_meshed.shape[1]])
@@ -69,7 +65,7 @@ for i in np.arange(np.size(wavelengths)):
      fig.tight_layout()
 
      fig.suptitle('Wavelength =' +str(np.round(input.wavelength/nm,0))+'nm', fontsize=16)
-     fig.savefig('Figures/wavelength' +str(np.round(input.wavelength/nm,0))+'nm' + '.png')
+     fig.savefig('Figures/scubed_wavelength' +str(np.round(input.wavelength/nm,0))+'nm' + '.png')
 
      plt.pause(0.000001)
      elapsed = time.time() - t
@@ -78,24 +74,14 @@ for i in np.arange(np.size(wavelengths)):
 #plt.show()
 #import some experimental data for comparison
 
-experimental_data=pd.read_excel(r'experimental.xlsx')
-wavelengths_experimental=experimental_data.loc[:,'Wavelength'].to_numpy()
-transmission_experimental=experimental_data.loc[:,'Transmission'].to_numpy()
-
-experimental_data = pd.read_excel(r'TL200-transmission.xlsx')
-wavelengths_lens = experimental_data.loc[:, 'Wavelength'].to_numpy()
-transmission_lens= experimental_data.loc[:, 'Transmission'].to_numpy()/100
-transmission_lens=np.interp(wavelengths/nm,wavelengths_lens,transmission_lens)
 
 fig=plt.figure(2)
-plt.plot(wavelengths/nm,transmission_collected*transmission_lens**2)
 plt.plot(wavelengths/nm,transmission_collected)
-plt.plot(wavelengths_experimental,transmission_experimental)
 plt.grid()
 plt.ylim((0,1.2))
-plt.xlim((420,700))
+plt.xlim((700,850))
 plt.xlabel('Wavelengths (nm)')
 plt.ylabel('Transmission')
-fig.savefig('Figures/Transmission.png')
+fig.savefig('Figures/scubed_Transmission.png')
 plt.show()
 #

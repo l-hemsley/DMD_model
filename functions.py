@@ -53,7 +53,7 @@ class output_parameters:
 # class related to the 'output parameters' of the system after the DMD, for example the collection lens.
 # gives the 2D array of angles used to build the diffraction pattern image
 
-    def __init__(self, axis_angle_x, axis_angle_y, datapoints,DMD,input):
+    def __init__(self, axis_angle_x, axis_angle_y, datapoints,DMD,lens,lens_diameter,focal_length,input):
 
         self.half_angle = input.wavelength/DMD.mirror_width # double approx the first minimum of the diffraction envelope due to the mirror
         self.axis_angle_x = axis_angle_x  # angle of optical axis to DMD perpendicular direction, =0 if normal incidence
@@ -69,6 +69,10 @@ class output_parameters:
                              self.angle_y_array_meshed, -1)
         self.effective_angle_of_vector = np.sqrt(
             (self.angle_x_array_meshed - axis_angle_x) ** 2 + (self.angle_y_array_meshed - axis_angle_y ) ** 2) #angle compared to optical axis
+        self.lens = lens
+        self.lens_diameter = lens_diameter
+        self.focal_length = focal_length
+        self.wavelength=input.wavelength
 
 def envelope_function(input, output, DMD):
 
@@ -120,7 +124,7 @@ def calculate_orders(input, output, DMD):
     # for x
     alpha_x = input.axis_angle_x
     beta_x = output.axis_angle_x
-    half_angle = output.half_angle
+    half_angle = 1.5*output.half_angle
     order_mx_max = np.ceil(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x+half_angle))/input.wavelength)
     order_mx_min = np.floor(DMD.pitch*(np.sin(alpha_x)+np.sin(beta_x-half_angle))/input.wavelength)
     order_array_mx = np.arange(order_mx_min, order_mx_max, 1)
@@ -188,7 +192,7 @@ def calculate_diffraction_pattern_image(input, output, DMD):
 
     #calculate total power collected by lens
     spatial_frequencies = np.sin(output.effective_angle_of_vector)/input.wavelength #check this
-    image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies,input)
+    image_collected_MTF = diffraction_image * MTF_function(spatial_frequencies,output)
     total_power_collected_MTF= np.sum(np.sum(image_collected_MTF))
 
     return [diffraction_image,total_power_collected_MTF,E2_grating,E2_envelope,image_collected_MTF]
