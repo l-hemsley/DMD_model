@@ -2,22 +2,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from functions import *
-
 import time
+
+## this model is used firstly to calculate the diffraction pattern from a DMD, and secondly to calculate the transmission efficiency with wavelength when collected with a lens.
+#The modelled configuration assumes point source at infinity -> focussing lens -> DMD -> collection lens -> view diffraction pattern/calculate collection efficiency
 
 #useful constants
 mm=10**-3
 um=10**-6
 nm=10**-9
 
-#initialize system using the paramters from the prototype
+#initialize system using the paramters from the prototype as an example
 
 #DMD_parameters(pitch, fill_factor, tilt_angle, mirror axis tilt direction)
 DMD=DMD_parameters(10.8*um,0.98,np.radians(12),'diagonal')
-a=8.54
-#(wavelength, axis_angle_x, axis_angle_y,lens,lens_diameter,focal_length):
-input=input_parameters(600*nm,np.radians(a),np.radians(-a),'TL200',0.05*2*150*mm,150*mm) #use lens='ideal' as default
-# output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints, DMD, input)
+a=8.73
+
+#input_parameters(wavelength, axis_angle_x, axis_angle_y,lens,lens_diameter,focal_length):
+#use lens='ideal' as default to calculate MTF function for unknown lenses
+#axis_angles_x/y describe the direction of the lens axis to the DMD.
+#assume the DMD is at the focal plane of the lens
+
+input=input_parameters(600*nm,np.radians(a),np.radians(-a),'TL200',0.05*2*150*mm,150*mm)
+
+#output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints, DMD,lens,lens_diameter,focal_length, input)
+#datapoints gives number of data points used to caluclate diffraction pattern - more points is slower but more accurate
 output=output_parameters(np.radians(a),np.radians(-a),200,DMD,'TL200',0.05*2*150*mm,150*mm,input)
 
  #ANTOINES SYSTEM - out of date
@@ -27,7 +36,7 @@ output=output_parameters(np.radians(a),np.radians(-a),200,DMD,'TL200',0.05*2*150
 
 #wavelength range of interest
 wavelengths=np.arange(420*nm,700*nm,20*nm)
-#wavelengths=[732*nm]
+
 transmission_collected=np.zeros((np.size(wavelengths)))
 image_collected=np.zeros([output.angle_x_array_meshed.shape[0],output.angle_x_array_meshed.shape[1]])
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
