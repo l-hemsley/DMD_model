@@ -16,7 +16,7 @@ nm=10**-9
 DMD=DMD_parameters(10.8*um,0.98,np.radians(12),'diagonal')
 a=8.54
 #(wavelength, axis_angle_x, axis_angle_y,lens,lens_diameter,focal_length):
-input=input_parameters(600*nm,np.radians(a),np.radians(-a),'TL200',0.05*2*150*mm,150*mm)
+input=input_parameters(600*nm,np.radians(a),np.radians(-a),'TL200',0.05*2*150*mm,150*mm) #use lens='ideal' as default
 # output_parameters(lens_NA, angle_x_centre, angle_y_centre, datapoints, DMD, input)
 output=output_parameters(np.radians(a),np.radians(-a),200,DMD,'TL200',0.05*2*150*mm,150*mm,input)
 
